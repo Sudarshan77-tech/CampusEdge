@@ -1,12 +1,49 @@
-import { PrismaClient, Role, CollegeStatus } from '@prisma/client';
+import { PrismaClient, CollegeStatus, SkillCategory } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const DEMO_COLLEGE_ID = '00000000-0000-0000-0000-000000000001';
-const DEMO_ADMIN_ID = '00000000-0000-0000-0000-000000000002';
+export const DEMO_COLLEGE_ID = '00000000-0000-0000-0000-000000000001';
+
+const STARTER_SKILLS = [
+  // Languages
+  { name: 'TypeScript', category: SkillCategory.LANGUAGE },
+  { name: 'JavaScript', category: SkillCategory.LANGUAGE },
+  { name: 'Python', category: SkillCategory.LANGUAGE },
+  { name: 'Java', category: SkillCategory.LANGUAGE },
+  { name: 'C++', category: SkillCategory.LANGUAGE },
+  { name: 'Go', category: SkillCategory.LANGUAGE },
+  { name: 'SQL', category: SkillCategory.LANGUAGE },
+
+  // Frameworks & Libraries
+  { name: 'Next.js', category: SkillCategory.FRAMEWORK },
+  { name: 'React', category: SkillCategory.FRAMEWORK },
+  { name: 'NestJS', category: SkillCategory.FRAMEWORK },
+  { name: 'Node.js', category: SkillCategory.FRAMEWORK },
+  { name: 'Spring Boot', category: SkillCategory.FRAMEWORK },
+  { name: 'FastAPI', category: SkillCategory.FRAMEWORK },
+
+  // Databases
+  { name: 'PostgreSQL', category: SkillCategory.DATABASE },
+  { name: 'MongoDB', category: SkillCategory.DATABASE },
+  { name: 'Redis', category: SkillCategory.DATABASE },
+
+  // CS Fundamentals
+  { name: 'Data Structures & Algorithms', category: SkillCategory.CS_FUNDAMENTAL },
+  { name: 'System Design', category: SkillCategory.CS_FUNDAMENTAL },
+  { name: 'Operating Systems', category: SkillCategory.CS_FUNDAMENTAL },
+  { name: 'Database Management Systems', category: SkillCategory.CS_FUNDAMENTAL },
+  { name: 'Computer Networks', category: SkillCategory.CS_FUNDAMENTAL },
+
+  // Tools
+  { name: 'Git & GitHub', category: SkillCategory.TOOL },
+  { name: 'Docker', category: SkillCategory.TOOL },
+  { name: 'Linux', category: SkillCategory.TOOL },
+  { name: 'Kubernetes', category: SkillCategory.TOOL },
+  { name: 'CI/CD Pipelines', category: SkillCategory.TOOL },
+];
 
 async function main() {
-  console.log('--- Starting Database Seeding ---');
+  console.info('--- Starting Database Seeding ---');
 
   // 1. Upsert Demo College
   const college = await prisma.college.upsert({
@@ -17,6 +54,9 @@ async function main() {
       city: 'Bengaluru',
       state: 'Karnataka',
       status: CollegeStatus.ACTIVE,
+      emailDomains: ['apex.edu', 'campusedge.internal'],
+      requireStudentApproval: false,
+      contactEmail: 'admissions@apex.edu',
     },
     create: {
       id: DEMO_COLLEGE_ID,
@@ -25,44 +65,54 @@ async function main() {
       city: 'Bengaluru',
       state: 'Karnataka',
       status: CollegeStatus.ACTIVE,
+      emailDomains: ['apex.edu', 'campusedge.internal'],
+      requireStudentApproval: false,
+      contactEmail: 'admissions@apex.edu',
     },
   });
-  console.log(`[Seed] College verified: ${college.name} (${college.id})`);
+  console.info(`[Seed] College verified: ${college.name} (${college.id})`);
 
-  // 2. Upsert Demo Placement Admin
-  const adminProfile = await prisma.userProfile.upsert({
-    where: { id: DEMO_ADMIN_ID },
-    update: {
-      fullName: 'Chief Placement Officer',
-      collegeId: college.id,
-      role: Role.COLLEGE_ADMIN,
-    },
-    create: {
-      id: DEMO_ADMIN_ID,
-      email: 'tpo@apex-iet.edu.in',
-      fullName: 'Chief Placement Officer',
-      collegeId: college.id,
-      role: Role.COLLEGE_ADMIN,
-    },
-  });
-  console.log(
-    `[Seed] Placement Officer Profile verified: ${adminProfile.fullName} (${adminProfile.email})`,
-  );
+  // 2. Upsert Branches
+  const branches = [
+    { name: 'Computer Science & Engineering', code: 'CSE' },
+    { name: 'Electronics & Communication Engineering', code: 'ECE' },
+    { name: 'Information Science & Engineering', code: 'ISE' },
+    { name: 'Mechanical Engineering', code: 'MECH' },
+  ];
 
-  // 3. Upsert System Initialization Audit Log
-  await prisma.auditLog.create({
-    data: {
-      collegeId: college.id,
-      actorId: adminProfile.id,
-      action: 'SYSTEM_SEEDED',
-      entityType: 'COLLEGE',
-      entityId: college.id,
-      metadata: { seedVersion: '1.0.0', initializedAt: new Date().toISOString() },
-    },
-  });
-  console.log('[Seed] System seed audit log recorded.');
+  for (const b of branches) {
+    const branch = await prisma.branch.upsert({
+      where: {
+        collegeId_code: {
+          collegeId: college.id,
+          code: b.code,
+        },
+      },
+      update: { name: b.name, isActive: true },
+      create: {
+        collegeId: college.id,
+        name: b.name,
+        code: b.code,
+        isActive: true,
+      },
+    });
+    console.info(`[Seed] Branch verified: ${branch.name} [${branch.code}]`);
+  }
 
-  console.log('--- Database Seeding Finished Successfully ---');
+  // 3. Upsert Starter Skills
+  for (const skill of STARTER_SKILLS) {
+    await prisma.skill.upsert({
+      where: { name: skill.name },
+      update: { category: skill.category },
+      create: {
+        name: skill.name,
+        category: skill.category,
+      },
+    });
+  }
+  console.info(`[Seed] Seeded ${STARTER_SKILLS.length} starter skills into catalog.`);
+
+  console.info('--- Database Seeding Finished Successfully ---');
 }
 
 main()

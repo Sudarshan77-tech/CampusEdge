@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Role, roleSchema, currentUserSchema } from './index';
+import { Role, UserStatus, roleSchema, currentUserSchema } from './index';
 
 describe('Shared Schemas & Enums', () => {
   it('should validate valid roles', () => {
@@ -16,11 +16,13 @@ describe('Shared Schemas & Enums', () => {
     const validUser = {
       userId: '11111111-1111-1111-1111-111111111111',
       role: Role.STUDENT,
+      status: UserStatus.ACTIVE,
       collegeId: '22222222-2222-2222-2222-222222222222',
       email: 'student@example.com',
     };
     const parsed = currentUserSchema.parse(validUser);
     expect(parsed.userId).toBe(validUser.userId);
     expect(parsed.role).toBe(Role.STUDENT);
+    expect(parsed.status).toBe(UserStatus.ACTIVE);
   });
 });

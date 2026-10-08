@@ -18,16 +18,22 @@
     "db:reset": "pnpm --filter @campusedge/database db:reset",
     "db:verify-rls": "pnpm --filter @campusedge/database db:verify-rls",
     "db:verify-rls:remote": "pnpm --filter @campusedge/database db:verify-rls:remote",
+    "db:test-rls": "pnpm --filter @campusedge/database db:test-rls",
+    "db:test-rls:remote": "pnpm --filter @campusedge/database db:test-rls:remote",
+    "db:seed:dev-users": "pnpm --filter @campusedge/database db:seed:dev-users",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "prepare": "husky"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
     "prettier": "^3.5.3",
     "supabase": "^2.120.0",
     "turbo": "^2.4.4",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.71.1"
   }
 }

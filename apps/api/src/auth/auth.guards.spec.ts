@@ -19,9 +19,31 @@ describe('Auth & Tenant Guards', () => {
       expect(result).toEqual(user);
     });
 
-    it('should throw UnauthorizedException on expired token or error', () => {
+    it('should throw UnauthorizedException on expired token', () => {
       expect(() => {
         guard.handleRequest(new Error('jwt expired'), null, { message: 'jwt expired' });
+      }).toThrow(UnauthorizedException);
+    });
+
+    it('should throw UnauthorizedException on wrong issuer', () => {
+      expect(() => {
+        guard.handleRequest(new Error('jwt issuer invalid'), null, {
+          message: 'jwt issuer invalid',
+        });
+      }).toThrow(UnauthorizedException);
+    });
+
+    it('should throw UnauthorizedException on wrong audience', () => {
+      expect(() => {
+        guard.handleRequest(new Error('jwt audience invalid'), null, {
+          message: 'jwt audience invalid',
+        });
+      }).toThrow(UnauthorizedException);
+    });
+
+    it('should throw UnauthorizedException on wrong algorithm', () => {
+      expect(() => {
+        guard.handleRequest(new Error('invalid algorithm'), null, { message: 'invalid algorithm' });
       }).toThrow(UnauthorizedException);
     });
 

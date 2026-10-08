@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "lint": "prettier --check \"src/**/*.ts\" \"prisma/**/*.ts\"",
+    "lint": "eslint \"src/**/*.ts\" \"prisma/**/*.ts\" && prettier --check \"src/**/*.ts\" \"prisma/**/*.ts\"",
     "db:generate": "prisma generate",
     "db:migrate:dev": "dotenv -e ../../apps/api/.env.local -- prisma migrate dev",
     "db:migrate:deploy": "dotenv -e ../../apps/api/.env.local -- prisma migrate deploy",
@@ -16,10 +16,14 @@
     "db:seed:remote": "dotenv -e ../../apps/api/.env -- tsx prisma/seed.ts",
     "db:reset": "dotenv -e ../../apps/api/.env.local -- prisma migrate reset",
     "db:verify-rls": "dotenv -e ../../apps/api/.env.local -- tsx prisma/verify-rls.ts",
-    "db:verify-rls:remote": "dotenv -e ../../apps/api/.env -- tsx prisma/verify-rls.ts"
+    "db:verify-rls:remote": "dotenv -e ../../apps/api/.env -- tsx prisma/verify-rls.ts",
+    "db:test-rls": "dotenv -e ../../apps/api/.env.local -- tsx prisma/test-rls.ts",
+    "db:test-rls:remote": "dotenv -e ../../apps/api/.env -- tsx prisma/test-rls.ts",
+    "db:seed:dev-users": "dotenv -e ../../apps/api/.env -- tsx prisma/seed-dev-users.ts"
   },
   "dependencies": {
-    "@prisma/client": "^6.4.1"
+    "@prisma/client": "^6.4.1",
+    "@supabase/supabase-js": "^2.117.3"
   },
   "devDependencies": {
     "@campusedge/config": "workspace:*",

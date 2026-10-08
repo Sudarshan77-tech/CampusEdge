@@ -7,7 +7,7 @@
     "dev": "nest start --watch",
     "start": "nest start",
     "start:prod": "node dist/main.js",
-    "lint": "prettier --check \"src/**/*.ts\"",
+    "lint": "eslint \"src/**/*.ts\" && prettier --check \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "test": "jest --passWithNoTests"
   },

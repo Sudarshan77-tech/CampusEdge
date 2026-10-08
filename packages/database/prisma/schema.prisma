@@ -24,35 +24,239 @@ enum CollegeStatus {
   @@map("college_status_enum")
 }
 
-model College {
-  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name      String        @db.VarChar(255)
-  slug      String        @unique @db.VarChar(100)
-  city      String        @db.VarChar(100)
-  state     String        @db.VarChar(100)
-  status    CollegeStatus @default(PENDING)
-  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+enum UserStatus {
+  ONBOARDING
+  PENDING_APPROVAL
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
 
-  userProfiles UserProfile[]
-  auditLogs    AuditLog[]
+  @@map("user_status_enum")
+}
+
+enum Degree {
+  BTECH
+  MTECH
+  MCA
+  MBA
+  OTHER
+
+  @@map("degree_enum")
+}
+
+enum SkillCategory {
+  LANGUAGE
+  FRAMEWORK
+  DATABASE
+  CS_FUNDAMENTAL
+  TOOL
+
+  @@map("skill_category_enum")
+}
+
+enum Proficiency {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+
+  @@map("proficiency_enum")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+
+  @@map("invitation_status_enum")
+}
+
+enum ConsentType {
+  TERMS
+  PRIVACY
+  DATA_PROCESSING
+
+  @@map("consent_type_enum")
+}
+
+enum DataRequestType {
+  EXPORT
+  DELETE
+
+  @@map("data_request_type_enum")
+}
+
+enum DataRequestStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  REJECTED
+
+  @@map("data_request_status_enum")
+}
+
+model College {
+  id                     String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                   String        @db.VarChar(255)
+  slug                   String        @unique @db.VarChar(100)
+  city                   String        @db.VarChar(100)
+  state                  String        @db.VarChar(100)
+  status                 CollegeStatus @default(PENDING)
+  emailDomains           String[]      @default([]) @map("email_domains")
+  requireStudentApproval Boolean       @default(false) @map("require_student_approval")
+  contactEmail           String?       @map("contact_email") @db.VarChar(255)
+  createdAt              DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  userProfiles    UserProfile[]
+  auditLogs       AuditLog[]
+  branches        Branch[]
+  invitations     Invitation[]
+  studentProfiles StudentProfile[]
+  studentSkills   StudentSkill[]
 
   @@map("colleges")
 }
 
 model UserProfile {
-  id        String   @id @db.Uuid
-  collegeId String?  @map("college_id") @db.Uuid
-  role      Role     @default(STUDENT)
-  fullName  String   @map("full_name") @db.VarChar(255)
-  email     String   @unique @db.VarChar(255)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id        String     @id @db.Uuid
+  collegeId String?    @map("college_id") @db.Uuid
+  role      Role       @default(STUDENT)
+  status    UserStatus @default(ONBOARDING)
+  fullName  String     @map("full_name") @db.VarChar(255)
+  email     String     @unique @db.VarChar(255)
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  college College? @relation(fields: [collegeId], references: [id], onDelete: Restrict)
+  college        College?        @relation(fields: [collegeId], references: [id], onDelete: Restrict)
+  studentProfile StudentProfile?
+  consents       ConsentRecord[]
+  dataRequests   DataRequest[]
 
   @@index([collegeId])
   @@map("user_profiles")
+}
+
+model Branch {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  collegeId String   @map("college_id") @db.Uuid
+  name      String   @db.VarChar(100)
+  code      String   @db.VarChar(20)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  college         College          @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  studentProfiles StudentProfile[]
+
+  @@unique([collegeId, code])
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@map("branches")
+}
+
+model Invitation {
+  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email      String           @db.VarChar(255)
+  role       Role             @default(COLLEGE_ADMIN)
+  collegeId  String           @map("college_id") @db.Uuid
+  invitedBy  String           @map("invited_by") @db.Uuid
+  status     InvitationStatus @default(PENDING)
+  expiresAt  DateTime         @map("expires_at") @db.Timestamptz(6)
+  acceptedAt DateTime?        @map("accepted_at") @db.Timestamptz(6)
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId])
+  @@index([email])
+  @@map("invitations")
+}
+
+model StudentProfile {
+  userId                String    @id @map("user_id") @db.Uuid
+  collegeId             String    @map("college_id") @db.Uuid
+  branchId              String    @map("branch_id") @db.Uuid
+  degree                Degree    @default(BTECH)
+  batchYear             Int       @map("batch_year")
+  cgpa                  Decimal   @db.Decimal(4, 2)
+  activeBacklogs        Int       @default(0) @map("active_backlogs")
+  enrollmentNumber      String?   @map("enrollment_number") @db.VarChar(50)
+  targetRole            String?   @map("target_role") @db.VarChar(100)
+  onboardingCompletedAt DateTime? @map("onboarding_completed_at") @db.Timestamptz(6)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  userProfile   UserProfile    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college       College        @relation(fields: [collegeId], references: [id], onDelete: Restrict)
+  branch        Branch         @relation(fields: [branchId, collegeId], references: [id, collegeId], onDelete: Restrict)
+  studentSkills StudentSkill[]
+
+  @@unique([collegeId, enrollmentNumber])
+  @@index([collegeId])
+  @@index([branchId])
+  @@map("student_profiles")
+}
+
+model Skill {
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String        @unique @db.VarChar(100)
+  category  SkillCategory
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentSkills StudentSkill[]
+
+  @@map("skills")
+}
+
+model StudentSkill {
+  studentId   String      @map("student_id") @db.Uuid
+  skillId     String      @map("skill_id") @db.Uuid
+  collegeId   String      @map("college_id") @db.Uuid
+  proficiency Proficiency @default(BEGINNER)
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  studentProfile StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  skill          Skill          @relation(fields: [skillId], references: [id], onDelete: Restrict)
+  college        College        @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, skillId])
+  @@index([collegeId])
+  @@index([skillId])
+  @@map("student_skills")
+}
+
+model ConsentRecord {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String      @map("user_id") @db.Uuid
+  consentType   ConsentType @map("consent_type")
+  policyVersion String      @map("policy_version") @db.VarChar(20)
+  ipAddress     String?     @map("ip_address") @db.VarChar(45)
+  userAgent     String?     @map("user_agent") @db.Text
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  userProfile UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("consent_records")
+}
+
+model DataRequest {
+  id        String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String            @map("user_id") @db.Uuid
+  type      DataRequestType
+  status    DataRequestStatus @default(OPEN)
+  handledBy String?           @map("handled_by") @db.Uuid
+  handledAt DateTime?         @map("handled_at") @db.Timestamptz(6)
+  createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  userProfile UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("data_requests")
 }
 
 model AuditLog {
@@ -63,6 +267,8 @@ model AuditLog {
   entityType String   @map("entity_type") @db.VarChar(100)
   entityId   String?  @map("entity_id") @db.VarChar(100)
   metadata   Json?    @db.JsonB
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  requestId  String?  @map("request_id") @db.VarChar(100)
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   college College? @relation(fields: [collegeId], references: [id], onDelete: SetNull)

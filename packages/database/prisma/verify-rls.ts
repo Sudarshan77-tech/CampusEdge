@@ -7,9 +7,16 @@ interface TableRlsStatus {
   rowsecurity: boolean;
 }
 
-async function verifyRls() {
-  console.log('--- Verifying PostgreSQL Row Level Security (RLS) ---');
+interface TableGrant {
+  table_name: string;
+  grantee: string;
+  privilege_type: string;
+}
 
+async function verifyRls() {
+  console.info('--- Auditing Row Level Security & Table Grants ---');
+
+  // 1. Audit RLS enabled on all public tables
   const tables = await prisma.$queryRaw<TableRlsStatus[]>`
     SELECT tablename, rowsecurity 
     FROM pg_tables 
@@ -24,14 +31,37 @@ async function verifyRls() {
   }
 
   const unshieldedTables: string[] = [];
-
   for (const table of tables) {
     if (table.rowsecurity) {
-      console.log(`[RLS Shielded]  ✓ public.${table.tablename}`);
+      console.info(`[RLS Shielded]  ✓ public.${table.tablename}`);
     } else {
       console.error(`[RLS UNPROTECTED] ✗ public.${table.tablename} lacks Row Level Security!`);
       unshieldedTables.push(table.tablename);
     }
+  }
+
+  // 2. Audit that anon and authenticated roles have NO table grants on public tables
+  const directGrants = await prisma.$queryRaw<TableGrant[]>`
+    SELECT table_name, grantee, privilege_type
+    FROM information_schema.role_table_grants
+    WHERE table_schema = 'public'
+      AND table_name != '_prisma_migrations'
+      AND grantee IN ('anon', 'authenticated')
+    ORDER BY table_name, grantee;
+  `;
+
+  if (directGrants && directGrants.length > 0) {
+    console.error(
+      `\nCRITICAL SECURITY VIOLATION: ${directGrants.length} direct grant(s) exist on public tables for anon/authenticated roles:`,
+    );
+    for (const g of directGrants) {
+      console.error(`  - ${g.grantee} has ${g.privilege_type} on ${g.table_name}`);
+    }
+    process.exit(1);
+  } else {
+    console.info(
+      '[Direct Grants Check] ✓ PostgREST Data API access completely revoked from anon & authenticated.',
+    );
   }
 
   if (unshieldedTables.length > 0) {
@@ -42,14 +72,14 @@ async function verifyRls() {
     process.exit(1);
   }
 
-  console.log(
-    `\nAll ${tables.length} public table(s) have Row Level Security enabled. RLS audit PASSED.`,
+  console.info(
+    `\nAll ${tables.length} public table(s) have RLS active and zero direct grants for anon/authenticated. Audit PASSED.`,
   );
 }
 
 verifyRls()
   .catch((e) => {
-    console.error('RLS verification failed:', e);
+    console.error('RLS audit failed:', e);
     process.exit(1);
   })
   .finally(async () => {
