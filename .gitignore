@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Environment files
+.env*
+!.env.example
+
+# Next.js
+.next/
+out/
+
+# Build artifacts
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+
+# Testing & Coverage
+coverage/
+*.lcov
+
+# Supabase
+supabase/.temp/
+supabase/.branches/
+
+# IDE & OS / Windows Junk
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log

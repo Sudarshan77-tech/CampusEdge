@@ -1,0 +1,33 @@
+{
+  "name": "campusedge-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@12.10.1",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "db:generate": "pnpm --filter @campusedge/database db:generate",
+    "db:migrate:dev": "pnpm --filter @campusedge/database db:migrate:dev",
+    "db:migrate:deploy": "pnpm --filter @campusedge/database db:migrate:deploy",
+    "db:migrate:deploy:remote": "pnpm --filter @campusedge/database db:migrate:deploy:remote",
+    "db:seed": "pnpm --filter @campusedge/database db:seed",
+    "db:seed:remote": "pnpm --filter @campusedge/database db:seed:remote",
+    "db:reset": "pnpm --filter @campusedge/database db:reset",
+    "db:verify-rls": "pnpm --filter @campusedge/database db:verify-rls",
+    "db:verify-rls:remote": "pnpm --filter @campusedge/database db:verify-rls:remote",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.5.3",
+    "supabase": "^2.120.0",
+    "turbo": "^2.4.4",
+    "typescript": "^5.8.2"
+  }
+}

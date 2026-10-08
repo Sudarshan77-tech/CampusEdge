@@ -1,0 +1,38 @@
+# Base node image
+FROM node:24-alpine AS base
+RUN corepack enable && corepack prepare pnpm@12.10.1 --activate
+WORKDIR /app
+
+# Dependency fetching stage
+FROM base AS dependencies
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/config/package.json ./packages/config/
+COPY packages/shared/package.json ./packages/shared/
+RUN pnpm install --frozen-lockfile
+
+# Builder stage
+FROM base AS builder
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=dependencies /app/apps/web/node_modules ./apps/web/node_modules
+COPY --from=dependencies /app/packages/config/node_modules ./packages/config/node_modules
+COPY --from=dependencies /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY . .
+RUN pnpm --filter @campusedge/shared build
+RUN pnpm --filter @campusedge/web build
+
+# Runner stage (Non-root user)
+FROM node:24-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next ./.next
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/package.json ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./root_node_modules
+
+USER nextjs
+EXPOSE 3000
+CMD ["node_modules/.bin/next", "start"]

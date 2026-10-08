@@ -1,0 +1,33 @@
+{
+  "name": "@campusedge/database",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "prettier --check \"src/**/*.ts\" \"prisma/**/*.ts\"",
+    "db:generate": "prisma generate",
+    "db:migrate:dev": "dotenv -e ../../apps/api/.env.local -- prisma migrate dev",
+    "db:migrate:deploy": "dotenv -e ../../apps/api/.env.local -- prisma migrate deploy",
+    "db:migrate:deploy:remote": "dotenv -e ../../apps/api/.env -- prisma migrate deploy",
+    "db:seed": "dotenv -e ../../apps/api/.env.local -- tsx prisma/seed.ts",
+    "db:seed:remote": "dotenv -e ../../apps/api/.env -- tsx prisma/seed.ts",
+    "db:reset": "dotenv -e ../../apps/api/.env.local -- prisma migrate reset",
+    "db:verify-rls": "dotenv -e ../../apps/api/.env.local -- tsx prisma/verify-rls.ts",
+    "db:verify-rls:remote": "dotenv -e ../../apps/api/.env -- tsx prisma/verify-rls.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.4.1"
+  },
+  "devDependencies": {
+    "@campusedge/config": "workspace:*",
+    "@types/node": "^22.13.9",
+    "dotenv": "^16.4.7",
+    "dotenv-cli": "^8.0.0",
+    "prisma": "^6.4.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}
