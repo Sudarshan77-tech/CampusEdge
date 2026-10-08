@@ -5,7 +5,13 @@ import { APP_GUARD } from '@nestjs/core';
 import { validateEnv } from './env.validation';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
+import { AuditModule } from './audit/audit.module';
+import { AdminModule } from './admin/admin.module';
+import { CollegesModule } from './colleges/colleges.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
+import { StudentsModule } from './students/students.module';
 import { PrismaService } from './prisma.service';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -20,13 +26,22 @@ import { PrismaService } from './prisma.service';
       },
     ]),
     HealthModule,
+    AuditModule,
     AuthModule,
+    AdminModule,
+    CollegesModule,
+    OnboardingModule,
+    StudentsModule,
   ],
   providers: [
     PrismaService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
     },
   ],
 })

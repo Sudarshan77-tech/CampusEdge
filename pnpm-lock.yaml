@@ -264,6 +264,12 @@ importers:
       '@nestjs/throttler':
         specifier: ^6.4.0
         version: 6.7.1(@nestjs/common@11.2.7(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.2.7)(reflect-metadata@0.2.2)
+      '@prisma/client':
+        specifier: ^7.10.0
+        version: 7.10.0(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
+      '@supabase/supabase-js':
+        specifier: ^2.117.3
+        version: 2.117.3
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -331,6 +337,9 @@ importers:
       ts-jest:
         specifier: ^29.2.6
         version: 29.4.14(@babel/core@7.29.7(supports-color@8.1.1))(@jest/transform@29.7.0(supports-color@8.1.1))(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(esbuild@0.28.2)(jest-util@29.7.0)(jest@29.7.0(@types/node@22.20.5)(supports-color@8.1.1))(typescript@5.9.3)
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
       typescript:
         specifier: ^5.8.2
         version: 5.9.3
@@ -2122,6 +2131,12 @@ packages:
         integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==,
       }
 
+  '@prisma/client-runtime-utils@7.10.0':
+    resolution:
+      {
+        integrity: sha512-cnCy7lUV8/CctgKVEmqAbSLAmwqJdE/qAlqTBk/0NDk59zEb2cZ0M0M0E4vVPnqbSEYudRroQDvOWfUZH6RIfw==,
+      }
+
   '@prisma/client@6.19.3':
     resolution:
       {
@@ -2131,6 +2146,21 @@ packages:
     peerDependencies:
       prisma: '*'
       typescript: '>=5.1.0'
+    peerDependenciesMeta:
+      prisma:
+        optional: true
+      typescript:
+        optional: true
+
+  '@prisma/client@7.10.0':
+    resolution:
+      {
+        integrity: sha512-Ubw/QS9JGIBSBUsyxAUQuK/Jcu0Tsva7le7QbLd91Kix9yJvYDdj5QkwgEbbZniH80dd+sziQcALPc+HnvQC8Q==,
+      }
+    engines: { node: ^20.19 || ^22.12 || >=24.0 }
+    peerDependencies:
+      prisma: '*'
+      typescript: '>=5.4.0'
     peerDependenciesMeta:
       prisma:
         optional: true
@@ -8987,7 +9017,16 @@ snapshots:
 
   '@pinojs/redact@0.4.0': {}
 
+  '@prisma/client-runtime-utils@7.10.0': {}
+
   '@prisma/client@6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)':
+    optionalDependencies:
+      prisma: 6.19.3(typescript@5.9.3)
+      typescript: 5.9.3
+
+  '@prisma/client@7.10.0(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)':
+    dependencies:
+      '@prisma/client-runtime-utils': 7.10.0
     optionalDependencies:
       prisma: 6.19.3(typescript@5.9.3)
       typescript: 5.9.3

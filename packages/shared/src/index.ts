@@ -172,8 +172,8 @@ export const createCollegeSchema = z.object({
     .regex(/^[a-z0-9-]+$/, 'Slug must only contain lowercase alphanumeric characters and hyphens'),
   city: z.string().min(2).max(100),
   state: z.string().min(2).max(100),
-  emailDomains: z.array(z.string().toLowerCase().trim()).default([]),
-  requireStudentApproval: z.boolean().default(false),
+  emailDomains: z.array(z.string().toLowerCase().trim()).default([]).optional(),
+  requireStudentApproval: z.boolean().default(false).optional(),
   contactEmail: z.string().email().optional().nullable(),
 });
 export type CreateCollegeDto = z.infer<typeof createCollegeSchema>;
@@ -207,7 +207,7 @@ export type UpdateCollegeSettingsDto = z.infer<typeof updateCollegeSettingsSchem
 export const createBranchSchema = z.object({
   name: z.string().min(2).max(100),
   code: z.string().min(1).max(20).toUpperCase().trim(),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean().default(true).optional(),
 });
 export type CreateBranchDto = z.infer<typeof createBranchSchema>;
 

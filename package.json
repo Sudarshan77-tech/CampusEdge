@@ -21,6 +21,7 @@
     "db:test-rls": "pnpm --filter @campusedge/database db:test-rls",
     "db:test-rls:remote": "pnpm --filter @campusedge/database db:test-rls:remote",
     "db:seed:dev-users": "pnpm --filter @campusedge/database db:seed:dev-users",
+    "admin:create-super-admin": "pnpm --filter @campusedge/api admin:create-super-admin",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "prepare": "husky"
