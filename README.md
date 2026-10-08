@@ -144,19 +144,33 @@ pnpm dev
 ## Root Scripts Reference
 
 ```powershell
-pnpm dev                # Run web and api concurrently in development mode
-pnpm build              # Build all workspace applications and libraries
-pnpm lint               # Run Prettier code style checks
-pnpm typecheck          # Run strict TypeScript checks across all packages
-pnpm test               # Run all test suites (Jest + Vitest)
-pnpm db:generate        # Re-generate Prisma Client from schema
-pnpm db:migrate:dev     # Apply Prisma migrations locally
-pnpm db:migrate:deploy  # Apply Prisma migrations in production / local deploy
-pnpm db:seed            # Seed database with idempotent fixtures
-pnpm db:verify-rls      # Audit all public tables for active Row Level Security
-pnpm supabase:start     # Start local Supabase Docker stack
-pnpm supabase:stop      # Stop local Supabase Docker stack
+pnpm dev                     # Run web and api concurrently in development mode
+pnpm build                   # Build all workspace applications and libraries
+pnpm lint                    # Run ESLint and Prettier checks across monorepo
+pnpm typecheck               # Run strict TypeScript checks across all packages
+pnpm test                    # Run all unit test suites (Jest + Vitest)
+pnpm db:generate             # Re-generate Prisma Client from schema
+pnpm db:migrate:deploy:remote # Apply Prisma migrations to remote dev database
+pnpm db:verify-rls:remote    # Verify RLS enabled on all 10 public tables
+pnpm db:test-rls:remote      # Run 6 automated database RLS security tests
+pnpm db:seed:dev-users       # Seed confirmed Supabase auth accounts for demo testing
+pnpm admin:create-super-admin --email <email> # Provision a platform super admin
+pnpm --filter @campusedge/web test:e2e        # Run Playwright E2E browser tests
 ```
+
+---
+
+## Phase 1 Seeded Demo Accounts
+
+The following confirmed demo identities are pre-seeded in the development database for end-to-end evaluation:
+
+| Role                | Email                            | Affiliated College           | Initial Route               |
+| :------------------ | :------------------------------- | :--------------------------- | :-------------------------- |
+| **Student**         | `student.demo@apex.edu`          | Apex Institute of Technology | `/student/dashboard`        |
+| **Placement Admin** | `placement.admin@apex.edu`       | Apex Institute of Technology | `/placement-cell/dashboard` |
+| **Super Admin**     | `superadmin@campusedge.internal` | Platform Operator (Bypass)   | `/admin/colleges`           |
+
+_Password: Defined in local `.env` files via `SEED_DEMO_PASSWORD`._
 
 ---
 
@@ -166,23 +180,25 @@ pnpm supabase:stop      # Stop local Supabase Docker stack
 CampusEdge/
 ├── .agent/                  # Architecture rules, skills, and execution workflows
 ├── apps/
-│   ├── web/                 # Next.js 15 App Router frontend
-│   └── api/                 # NestJS 11 backend API
+│   ├── web/                 # Next.js 15 App Router frontend (Auth, Stepper, Shells, Legal)
+│   └── api/                 # NestJS 11 backend API (Admin, Colleges, Onboarding, Students, Audit)
 ├── packages/
-│   ├── database/            # Prisma schema, migrations, seed, RLS audit
-│   ├── shared/              # Shared Zod schemas, types, DTOs, enums
-│   └── config/              # Shared tsconfig, prettier configurations
+│   ├── database/            # Prisma schema, migrations, seed, RLS audit and security test scripts
+│   ├── shared/              # Shared Zod schemas, types, DTOs, enums, constants
+│   └── config/              # Shared tsconfig, eslint, prettier configurations
 ├── docker/                  # Multi-stage production Dockerfiles
-├── .github/workflows/       # GitHub Actions CI workflow
-├── docs/                    # Architecture records, ADRs, deployment guides
-├── ROADMAP.md               # Product roadmap and phase tracking
+├── .github/workflows/       # GitHub Actions CI workflow (with Postgres auth stub)
+├── docs/                    # Architecture records, ADRs (ADR 0001, ADR 0002)
+├── ROADMAP.md               # Product roadmap and phase tracking (Phases 0 & 1 Complete)
 └── README.md                # Project documentation
 ```
 
 ---
 
-## Security & Compliance
+## Security & Compliance Architecture
 
 - **Tenant Scoping**: All institutional data is strictly partitioned by `college_id`.
-- **Primary & Secondary Defenses**: NestJS `TenantGuard` acts as the primary boundary; PostgreSQL Row Level Security (RLS) acts as the secondary database-level barrier.
-- **DPDP Act 2023**: Minimal data retention, student consent capture, and comprehensive audit logs on placement data mutations.
+- **Zero Client Metadata Trust**: Role and College ID can NEVER be self-assigned via client-side metadata.
+- **Data API Lockdown**: All PostgREST direct table grants revoked from `anon` and `authenticated`.
+- **Append-Only Immutability**: PostgreSQL triggers abort any `UPDATE` or `DELETE` attempt on `audit_logs` and `consent_records`.
+- **DPDP Act 2023**: Comprehensive statutory consent capture (Terms, Privacy, Placement Processing) and data subject request endpoints (`EXPORT`, `DELETE`).

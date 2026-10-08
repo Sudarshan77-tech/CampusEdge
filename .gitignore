@@ -19,6 +19,9 @@ build/
 # Testing & Coverage
 coverage/
 *.lcov
+test-results/
+playwright-report/
+blob-report/
 
 # Supabase
 supabase/.temp/

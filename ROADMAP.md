@@ -2,17 +2,17 @@
 
 ## Phases Overview
 
-| Phase       | Milestone                                                   | Target Duration | Status                      |
-| :---------- | :---------------------------------------------------------- | :-------------- | :-------------------------- |
-| **Phase 0** | Production Foundation & Architecture                        | Week 1          | 🟡 In Progress (Completing) |
-| **Phase 1** | Core Platform, Auth UI & College Onboarding                 | Weeks 2–3       | ⚪ Planned                  |
-| **Phase 2** | Placement Cell Cockpit & Campus Intelligence                | Weeks 4–5       | ⚪ Planned                  |
-| **Phase 3** | Diagnostic Engine & Transparent Readiness Score (MVP Pilot) | Weeks 6–7       | ⚪ Planned                  |
-| **Phase 4** | Company Intelligence & Preparation Blueprints               | Week 8          | ⚪ Planned                  |
-| **Phase 5** | Coding Practice Module & Judge0 Sandbox                     | Weeks 9–10      | ⚪ Planned                  |
-| **Phase 6** | AI Intelligence Layer (Resume & Mock Interviews)            | Weeks 11–12     | ⚪ Planned                  |
-| **Phase 7** | Personalization, Engagement & Streaks                       | Week 13         | ⚪ Planned                  |
-| **Phase 8** | Super Admin, Hardening, Security & Launch                   | Weeks 14–15     | ⚪ Planned                  |
+| Phase       | Milestone                                                   | Target Duration | Status         |
+| :---------- | :---------------------------------------------------------- | :-------------- | :------------- |
+| **Phase 0** | Production Foundation & Architecture                        | Week 1          | 🟢 Completed   |
+| **Phase 1** | Core Platform, Auth UI & College Onboarding                 | Weeks 2–3       | 🟢 Completed   |
+| **Phase 2** | Placement Cell Cockpit & Campus Intelligence                | Weeks 4–5       | 🟡 Next Target |
+| **Phase 3** | Diagnostic Engine & Transparent Readiness Score (MVP Pilot) | Weeks 6–7       | ⚪ Planned     |
+| **Phase 4** | Company Intelligence & Preparation Blueprints               | Week 8          | ⚪ Planned     |
+| **Phase 5** | Coding Practice Module & Judge0 Sandbox                     | Weeks 9–10      | ⚪ Planned     |
+| **Phase 6** | AI Intelligence Layer (Resume & Mock Interviews)            | Weeks 11–12     | ⚪ Planned     |
+| **Phase 7** | Personalization, Engagement & Streaks                       | Week 13         | ⚪ Planned     |
+| **Phase 8** | Super Admin, Hardening, Security & Launch                   | Weeks 14–15     | ⚪ Planned     |
 
 ---
 
@@ -34,12 +34,12 @@
 
 ## Phase 1: Core Platform & College Onboarding
 
-- [ ] Supabase Auth UI integration (Email/Password, Magic Link, College SSO)
-- [ ] Role-based route middleware in Next.js (Student, TPO, Super Admin)
-- [ ] College onboarding workflow (domain whitelist, student batch registration)
-- [ ] Comprehensive Student Profile schema (academics, branch, CGPA, backlogs, skills)
-- [ ] Dynamic multi-tenant scoping in all queries
-- [ ] DPDP consent capture and audit log persistence on onboarding
+- [x] Supabase Auth UI integration (Email/Password, Magic Link, Password Recovery)
+- [x] Role-based route middleware in Next.js (Student, Placement Cell, Super Admin)
+- [x] College onboarding workflow (domain whitelist, student batch registration, branch management)
+- [x] Comprehensive Student Profile schema (academics, branch, CGPA, backlogs, skills catalog)
+- [x] Dynamic multi-tenant scoping in all queries with PostgreSQL RLS & TenantGuard
+- [x] DPDP consent capture and audit log persistence with append-only database triggers
 
 ## Phase 2: Placement Cell Cockpit & Intelligence Data
 
