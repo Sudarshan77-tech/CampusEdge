@@ -76,6 +76,7 @@ enum ConsentType {
   PRIVACY
   DATA_PROCESSING
   PLACEMENT_SHARING
+  PERFORMANCE_SHARING
 
   @@map("consent_type_enum")
 }
@@ -232,6 +233,7 @@ enum ExperienceStatus {
 enum ImportJobType {
   HISTORICAL_DRIVES
   APPLICATION_RESULTS
+  QUESTIONS
 
   @@map("import_job_type_enum")
 }
@@ -275,6 +277,18 @@ model College {
   notices             Notice[]
   experiences         Experience[]
   importJobs          ImportJob[]
+  questionGroups      QuestionGroup[]
+  questions           Question[]
+  questionBookmarks   QuestionBookmark[]
+  testTemplates       TestTemplate[]
+  testSchedules       TestSchedule[]
+  attempts            Attempt[]
+  attemptItems        AttemptItem[]
+  attemptEvents       AttemptEvent[]
+  studentTopicStats   StudentTopicStat[]
+  readinessSnapshots  ReadinessSnapshot[]
+  roadmapPlans        RoadmapPlan[]
+  feedback            Feedback[]
 
   @@map("colleges")
 }
@@ -289,10 +303,20 @@ model UserProfile {
   createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  college        College?        @relation(fields: [collegeId], references: [id], onDelete: Restrict)
-  studentProfile StudentProfile?
-  consents       ConsentRecord[]
-  dataRequests   DataRequest[]
+  college                    College?             @relation(fields: [collegeId], references: [id], onDelete: Restrict)
+  studentProfile             StudentProfile?
+  consents                   ConsentRecord[]
+  dataRequests               DataRequest[]
+  reviewedQuestions          Question[]           @relation("QuestionReviewer")
+  authoredQuestionVersions   QuestionVersion[]    @relation("QuestionVersionAuthor")
+  questionReports            QuestionReport[]
+  questionBookmarks          QuestionBookmark[]
+  attempts                   Attempt[]            @relation("StudentAttempts")
+  voidedAttempts             Attempt[]            @relation("AttemptVoidedBy")
+  studentTopicStats          StudentTopicStat[]
+  readinessSnapshots         ReadinessSnapshot[]
+  roadmapPlans               RoadmapPlan[]
+  feedback                   Feedback[]
 
   @@index([collegeId])
   @@map("user_profiles")
@@ -345,10 +369,13 @@ model StudentProfile {
   cgpa                  Decimal   @db.Decimal(4, 2)
   activeBacklogs        Int       @default(0) @map("active_backlogs")
   enrollmentNumber      String?   @map("enrollment_number") @db.VarChar(50)
-  targetRole            String?   @map("target_role") @db.VarChar(100)
-  onboardingCompletedAt DateTime? @map("onboarding_completed_at") @db.Timestamptz(6)
-  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  targetRole            String?        @map("target_role") @db.VarChar(100)
+  technicalTrack        TechnicalTrack @default(SOFTWARE) @map("technical_track")
+  studyHoursPerDay      Decimal        @default(1.5) @map("study_hours_per_day") @db.Decimal(3, 1)
+  targetDate            DateTime?      @map("target_date") @db.Timestamptz(6)
+  onboardingCompletedAt DateTime?      @map("onboarding_completed_at") @db.Timestamptz(6)
+  createdAt             DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   userProfile       UserProfile        @relation(fields: [userId], references: [id], onDelete: Cascade)
   college           College            @relation(fields: [collegeId], references: [id], onDelete: Restrict)
@@ -402,6 +429,7 @@ model ConsentRecord {
   policyVersion String      @map("policy_version") @db.VarChar(20)
   ipAddress     String?     @map("ip_address") @db.VarChar(45)
   userAgent     String?     @map("user_agent") @db.Text
+  granted       Boolean     @default(true)
   createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
 
   userProfile UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -467,8 +495,9 @@ model Company {
 
   mergedInto  Company?     @relation("CompanyMerges", fields: [mergedIntoId], references: [id], onDelete: SetNull)
   mergedFrom  Company[]    @relation("CompanyMerges")
-  drives      Drive[]
-  experiences Experience[]
+  drives        Drive[]
+  experiences   Experience[]
+  testTemplates TestTemplate[]
 
   @@index([status])
   @@map("companies")
@@ -479,11 +508,22 @@ model Topic {
   name      String        @unique @db.VarChar(100)
   slug      String        @unique @db.VarChar(100)
   category  TopicCategory
+  parentId  String?       @map("parent_id") @db.Uuid
+  track     TestTrack     @default(ALL)
+  sortOrder Int           @default(0) @map("sort_order")
   createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  parent                Topic?                @relation("TopicHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  subtopics             Topic[]               @relation("TopicHierarchy")
   driveRoundTopics      DriveRoundTopic[]
   experienceRoundTopics ExperienceRoundTopic[]
+  questions             Question[]            @relation("TopicQuestions")
+  subtopicQuestions     Question[]            @relation("SubtopicQuestions")
+  testSectionRules      TestSectionRule[]     @relation("RuleTopic")
+  subtopicRules         TestSectionRule[]     @relation("RuleSubtopic")
+  studentStats          StudentTopicStat[]
+  roadmapTasks          RoadmapTask[]
 
   @@map("topics")
 }
@@ -542,6 +582,7 @@ model Drive {
   notices        Notice[]
   experiences    Experience[]
   consentRecords ConsentRecord[]
+  roadmapTasks   RoadmapTask[]
 
   @@unique([id, collegeId])
   @@index([collegeId])
@@ -865,3 +906,633 @@ model ImportRowError {
   @@index([jobId])
   @@map("import_row_errors")
 }
+
+// =============================================================================
+// Phase 3 Enums & Models: Practice, Diagnostics, Readiness Engine
+// =============================================================================
+
+enum QuestionType {
+  MCQ_SINGLE
+  MCQ_MULTI
+  NUMERIC
+
+  @@map("question_type_enum")
+}
+
+enum ContentScope {
+  GLOBAL
+  COLLEGE
+
+  @@map("content_scope_enum")
+}
+
+enum QuestionStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  RETIRED
+  FLAGGED
+
+  @@map("question_status_enum")
+}
+
+enum QuestionSource {
+  ORIGINAL_SEED
+  AUTHORED
+  IMPORTED
+  LICENSED
+
+  @@map("question_source_enum")
+}
+
+enum QuestionReportReason {
+  WRONG_ANSWER
+  UNCLEAR
+  DUPLICATE
+  OFFENSIVE
+  COPYRIGHT
+  OTHER
+
+  @@map("question_report_reason_enum")
+}
+
+enum TestTemplateKind {
+  DIAGNOSTIC
+  PRACTICE
+  MOCK
+  COLLEGE_TEST
+
+  @@map("test_template_kind_enum")
+}
+
+enum TestTemplateStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+
+  @@map("test_template_status_enum")
+}
+
+enum TestGenerationMode {
+  GENERATED
+  FIXED
+
+  @@map("test_generation_mode_enum")
+}
+
+enum TestTrack {
+  ALL
+  SOFTWARE
+
+  @@map("test_track_enum")
+}
+
+enum TechnicalTrack {
+  SOFTWARE
+  OTHER
+
+  @@map("technical_track_enum")
+}
+
+enum TestScheduleAudience {
+  ALL
+  BY_BRANCH
+  BY_BATCH_YEAR
+
+  @@map("test_schedule_audience_enum")
+}
+
+enum ResultsReleasePolicy {
+  IMMEDIATE
+  AFTER_WINDOW_CLOSES
+  MANUAL
+
+  @@map("results_release_policy_enum")
+}
+
+enum TestScheduleStatus {
+  SCHEDULED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+
+  @@map("test_schedule_status_enum")
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  AUTO_SUBMITTED
+  ABANDONED
+  VOIDED
+
+  @@map("attempt_status_enum")
+}
+
+enum AttemptEventType {
+  BLUR
+  FOCUS
+  FULLSCREEN_EXIT
+  VISIBILITY_HIDDEN
+  PASTE
+  RECONNECT
+
+  @@map("attempt_event_type_enum")
+}
+
+enum TopicMasteryLevel {
+  STRONG
+  MODERATE
+  WEAK
+  INSUFFICIENT_DATA
+
+  @@map("topic_mastery_level_enum")
+}
+
+enum ReadinessBand {
+  GETTING_STARTED
+  BUILDING
+  COMPETITIVE
+  STRONG
+
+  @@map("readiness_band_enum")
+}
+
+enum ReadinessConfidence {
+  LOW
+  MEDIUM
+  HIGH
+
+  @@map("readiness_confidence_enum")
+}
+
+enum ReadinessTrigger {
+  ATTEMPT_SUBMITTED
+  DAILY
+  MANUAL
+
+  @@map("readiness_trigger_enum")
+}
+
+enum RoadmapPlanStatus {
+  ACTIVE
+  SUPERSEDED
+
+  @@map("roadmap_plan_status_enum")
+}
+
+enum RoadmapTaskKind {
+  PRACTICE_TOPIC
+  TAKE_TEST
+  REVIEW_MISTAKES
+  MAINTENANCE
+  DRIVE_PREP
+
+  @@map("roadmap_task_kind_enum")
+}
+
+enum RoadmapTaskStatus {
+  PENDING
+  DONE
+  SKIPPED
+
+  @@map("roadmap_task_status_enum")
+}
+
+model QuestionGroup {
+  id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scope     ContentScope @default(COLLEGE)
+  collegeId String?      @map("college_id") @db.Uuid
+  title     String       @db.VarChar(255)
+  body      String       @db.Text
+  imagePath String?      @map("image_path") @db.VarChar(500)
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  college   College?     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  questions Question[]
+
+  @@unique([id, collegeId])
+  @@map("question_groups")
+}
+
+model Question {
+  id                  String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scope               ContentScope   @default(COLLEGE)
+  collegeId           String?        @map("college_id") @db.Uuid
+  topicId             String         @map("topic_id") @db.Uuid
+  subtopicId          String?        @map("subtopic_id") @db.Uuid
+  type                QuestionType   @default(MCQ_SINGLE)
+  difficulty          Int            @default(3)
+  groupId             String?        @map("group_id") @db.Uuid
+  status              QuestionStatus @default(DRAFT)
+  currentVersionId    String?        @map("current_version_id") @db.Uuid
+  source              QuestionSource @default(AUTHORED)
+  licenseNote         String?        @map("license_note") @db.Text
+  textHash            String         @map("text_hash") @db.VarChar(64)
+  needsHumanReview    Boolean        @default(true) @map("needs_human_review")
+  reviewedBy          String?        @map("reviewed_by") @db.Uuid
+  reviewedAt          DateTime?      @map("reviewed_at") @db.Timestamptz(6)
+  expectedTimeSeconds Int            @default(60) @map("expected_time_seconds")
+  tags                String[]       @default([])
+  createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  college              College?              @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  topic                Topic                 @relation("TopicQuestions", fields: [topicId], references: [id], onDelete: Restrict)
+  subtopic             Topic?                @relation("SubtopicQuestions", fields: [subtopicId], references: [id], onDelete: SetNull)
+  group                QuestionGroup?        @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  currentVersion       QuestionVersion?      @relation("QuestionCurrentVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  reviewer             UserProfile?          @relation("QuestionReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  versions             QuestionVersion[]     @relation("QuestionVersionsList")
+  stats                QuestionStat?
+  reports              QuestionReport[]
+  bookmarks            QuestionBookmark[]
+  testSectionQuestions TestSectionQuestion[]
+  attemptItems         AttemptItem[]
+
+  @@unique([id, collegeId])
+  @@index([textHash])
+  @@index([topicId])
+  @@index([subtopicId])
+  @@index([status])
+  @@index([collegeId])
+  @@map("questions")
+}
+
+model QuestionVersion {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  questionId       String   @map("question_id") @db.Uuid
+  version          Int      @default(1)
+  stem             String   @db.Text
+  imagePath        String?  @map("image_path") @db.VarChar(500)
+  explanation      String   @db.Text
+  numericAnswer    Float?   @map("numeric_answer")
+  numericTolerance Float?   @default(0) @map("numeric_tolerance")
+  createdBy        String?  @map("created_by") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  question          Question         @relation("QuestionVersionsList", fields: [questionId], references: [id], onDelete: Cascade)
+  currentOfQuestion Question[]       @relation("QuestionCurrentVersion")
+  author            UserProfile?     @relation("QuestionVersionAuthor", fields: [createdBy], references: [id], onDelete: SetNull)
+  options           QuestionOption[]
+  attemptItems      AttemptItem[]
+
+  @@unique([questionId, version])
+  @@map("question_versions")
+}
+
+model QuestionOption {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  versionId String  @map("version_id") @db.Uuid
+  key       String  @db.VarChar(5)
+  text      String  @db.Text
+  isCorrect Boolean @default(false) @map("is_correct")
+  sort      Int     @default(0)
+
+  version QuestionVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@map("question_options")
+}
+
+model QuestionStat {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  questionId   String   @unique @map("question_id") @db.Uuid
+  attemptCount Int      @default(0) @map("attempt_count")
+  correctCount Int      @default(0) @map("correct_count")
+  avgTimeMs    Int      @default(0) @map("avg_time_ms")
+  reportCount  Int      @default(0) @map("report_count")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("question_stats")
+}
+
+model QuestionReport {
+  id         String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  questionId String               @map("question_id") @db.Uuid
+  reporterId String               @map("reporter_id") @db.Uuid
+  reason     QuestionReportReason
+  note       String               @default("") @db.VarChar(500)
+  createdAt  DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  question Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  reporter UserProfile @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, reporterId])
+  @@map("question_reports")
+}
+
+model QuestionBookmark {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId  String   @map("student_id") @db.Uuid
+  collegeId  String   @map("college_id") @db.Uuid
+  questionId String   @map("question_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  student  UserProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  college  College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  question Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, questionId])
+  @@map("question_bookmarks")
+}
+
+model TestTemplate {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scope            ContentScope       @default(COLLEGE)
+  collegeId        String?            @map("college_id") @db.Uuid
+  kind             TestTemplateKind
+  title            String             @db.VarChar(255)
+  description      String             @default("") @db.Text
+  companyId        String?            @map("company_id") @db.Uuid
+  durationMinutes  Int                @map("duration_minutes")
+  shuffleQuestions Boolean            @default(true) @map("shuffle_questions")
+  shuffleOptions   Boolean            @default(true) @map("shuffle_options")
+  generationMode   TestGenerationMode @default(GENERATED) @map("generation_mode")
+  status           TestTemplateStatus @default(DRAFT)
+  track            TestTrack          @default(ALL)
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  college   College?       @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  company   Company?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  sections  TestSection[]
+  schedules TestSchedule[]
+  attempts  Attempt[]
+
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@index([kind])
+  @@index([status])
+  @@map("test_templates")
+}
+
+model TestSection {
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  templateId              String   @map("template_id") @db.Uuid
+  sequence                Int
+  title                   String   @db.VarChar(100)
+  marksPerQuestion        Float    @map("marks_per_question")
+  negativeMarks           Float    @default(0) @map("negative_marks")
+  sectionTimeLimitMinutes Int?     @map("section_time_limit_minutes")
+  questionCount           Int      @map("question_count")
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  template       TestTemplate          @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  rules          TestSectionRule[]
+  fixedQuestions TestSectionQuestion[]
+
+  @@unique([templateId, sequence])
+  @@map("test_sections")
+}
+
+model TestSectionRule {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sectionId     String   @map("section_id") @db.Uuid
+  topicId       String   @map("topic_id") @db.Uuid
+  subtopicId    String?  @map("subtopic_id") @db.Uuid
+  count         Int
+  difficultyMin Int      @default(1) @map("difficulty_min")
+  difficultyMax Int      @default(5) @map("difficulty_max")
+
+  section  TestSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  topic    Topic       @relation("RuleTopic", fields: [topicId], references: [id], onDelete: Restrict)
+  subtopic Topic?      @relation("RuleSubtopic", fields: [subtopicId], references: [id], onDelete: SetNull)
+
+  @@map("test_section_rules")
+}
+
+model TestSectionQuestion {
+  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sectionId  String @map("section_id") @db.Uuid
+  questionId String @map("question_id") @db.Uuid
+  position   Int
+
+  section  TestSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  question Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([sectionId, position])
+  @@map("test_section_questions")
+}
+
+model TestSchedule {
+  id                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  collegeId         String               @map("college_id") @db.Uuid
+  templateId        String               @map("template_id") @db.Uuid
+  title             String               @db.VarChar(255)
+  startsAt          DateTime             @map("starts_at") @db.Timestamptz(6)
+  endsAt            DateTime             @map("ends_at") @db.Timestamptz(6)
+  audience          TestScheduleAudience @default(ALL)
+  targetBranchIds   String[]             @default([]) @map("target_branch_ids") @db.Uuid
+  targetBatchYears  Int[]                @default([]) @map("target_batch_years")
+  resultsRelease    ResultsReleasePolicy @default(IMMEDIATE) @map("results_release")
+  resultsReleasedAt DateTime?            @map("results_released_at") @db.Timestamptz(6)
+  status            TestScheduleStatus   @default(SCHEDULED)
+  createdAt         DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  college  College      @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  template TestTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  attempts Attempt[]
+
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@index([templateId])
+  @@map("test_schedules")
+}
+
+model Attempt {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId          String           @map("student_id") @db.Uuid
+  collegeId          String           @map("college_id") @db.Uuid
+  templateId         String           @map("template_id") @db.Uuid
+  scheduleId         String?          @map("schedule_id") @db.Uuid
+  kind               TestTemplateKind
+  status             AttemptStatus    @default(IN_PROGRESS)
+  startedAt          DateTime         @default(now()) @map("started_at") @db.Timestamptz(6)
+  deadlineAt         DateTime         @map("deadline_at") @db.Timestamptz(6)
+  submittedAt        DateTime?        @map("submitted_at") @db.Timestamptz(6)
+  seed               Int
+  totalMarks         Float            @default(0) @map("total_marks")
+  score              Float            @default(0)
+  percent            Float            @default(0)
+  sectionScores      Json             @default("{}") @map("section_scores") @db.JsonB
+  formulaVersion     String           @default("1.0.0") @map("formula_version") @db.VarChar(20)
+  integrityFlagCount Int              @default(0) @map("integrity_flag_count")
+  userAgent          String?          @map("user_agent") @db.Text
+  voidReason         String?          @map("void_reason") @db.Text
+  voidedAt           DateTime?        @map("voided_at") @db.Timestamptz(6)
+  voidedBy           String?          @map("voided_by") @db.Uuid
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  student      UserProfile   @relation("StudentAttempts", fields: [studentId], references: [id], onDelete: Cascade)
+  college      College       @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  template     TestTemplate  @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  schedule     TestSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  voidedByUser UserProfile?  @relation("AttemptVoidedBy", fields: [voidedBy], references: [id], onDelete: SetNull)
+  items        AttemptItem[]
+  events       AttemptEvent[]
+
+  @@unique([id, collegeId])
+  @@index([studentId])
+  @@index([collegeId])
+  @@index([templateId])
+  @@index([scheduleId])
+  @@index([status])
+  @@map("attempts")
+}
+
+model AttemptItem {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  attemptId         String    @map("attempt_id") @db.Uuid
+  collegeId         String    @map("college_id") @db.Uuid
+  sectionSeq        Int       @map("section_seq")
+  position          Int
+  questionId        String    @map("question_id") @db.Uuid
+  versionId         String    @map("version_id") @db.Uuid
+  optionOrder       Int[]     @default([]) @map("option_order")
+  selectedOptionIds String[]  @default([]) @map("selected_option_ids") @db.Uuid
+  numericResponse   Float?    @map("numeric_response")
+  isCorrect         Boolean?  @map("is_correct")
+  marksAwarded      Float?    @map("marks_awarded")
+  answeredAt        DateTime? @map("answered_at") @db.Timestamptz(6)
+  timeSpentMs       Int       @default(0) @map("time_spent_ms")
+  markedForReview   Boolean   @default(false) @map("marked_for_review")
+  visited           Boolean   @default(false)
+
+  attempt  Attempt         @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  college  College         @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  question Question        @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  version  QuestionVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
+
+  @@unique([attemptId, position])
+  @@unique([id, collegeId])
+  @@index([attemptId])
+  @@index([collegeId])
+  @@index([questionId])
+  @@map("attempt_items")
+}
+
+model AttemptEvent {
+  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  attemptId  String           @map("attempt_id") @db.Uuid
+  collegeId  String           @map("college_id") @db.Uuid
+  type       AttemptEventType
+  occurredAt DateTime         @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  meta       Json             @default("{}") @db.JsonB
+
+  attempt Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId])
+  @@index([collegeId])
+  @@map("attempt_events")
+}
+
+model StudentTopicStat {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId       String            @map("student_id") @db.Uuid
+  collegeId       String            @map("college_id") @db.Uuid
+  topicId         String            @map("topic_id") @db.Uuid
+  scoredCount     Int               @default(0) @map("scored_count")
+  correctCount    Int               @default(0) @map("correct_count")
+  mastery         Float             @default(0.5)
+  level           TopicMasteryLevel @default(INSUFFICIENT_DATA)
+  lastPracticedAt DateTime?         @map("last_practiced_at") @db.Timestamptz(6)
+  formulaVersion  String            @default("1.0.0") @map("formula_version") @db.VarChar(20)
+  updatedAt       DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  student UserProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  college College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  topic   Topic       @relation(fields: [topicId], references: [id], onDelete: Restrict)
+
+  @@unique([studentId, topicId])
+  @@index([studentId])
+  @@index([collegeId])
+  @@index([topicId])
+  @@map("student_topic_stats")
+}
+
+model ReadinessSnapshot {
+  id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId      String              @map("student_id") @db.Uuid
+  collegeId      String              @map("college_id") @db.Uuid
+  computedAt     DateTime            @default(now()) @map("computed_at") @db.Timestamptz(6)
+  formulaVersion String              @default("1.0.0") @map("formula_version") @db.VarChar(20)
+  score          Float
+  band           ReadinessBand
+  confidence     ReadinessConfidence
+  components     Json                @db.JsonB
+  trigger        ReadinessTrigger    @default(ATTEMPT_SUBMITTED)
+
+  student UserProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  college College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([collegeId])
+  @@index([computedAt])
+  @@map("readiness_snapshots")
+}
+
+model RoadmapPlan {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId      String            @map("student_id") @db.Uuid
+  collegeId      String            @map("college_id") @db.Uuid
+  status         RoadmapPlanStatus @default(ACTIVE)
+  generatedAt    DateTime          @default(now()) @map("generated_at") @db.Timestamptz(6)
+  horizonDays    Int               @default(28) @map("horizon_days")
+  inputs         Json              @default("{}") @db.JsonB
+  formulaVersion String            @default("1.0.0") @map("formula_version") @db.VarChar(20)
+
+  student UserProfile   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  college College       @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  tasks   RoadmapTask[]
+
+  @@index([studentId])
+  @@index([collegeId])
+  @@map("roadmap_plans")
+}
+
+model RoadmapTask {
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  planId              String            @map("plan_id") @db.Uuid
+  scheduledDate       String            @map("scheduled_date") @db.VarChar(10)
+  kind                RoadmapTaskKind
+  topicId             String?           @map("topic_id") @db.Uuid
+  driveId             String?           @map("drive_id") @db.Uuid
+  targetQuestionCount Int               @map("target_question_count")
+  status              RoadmapTaskStatus @default(PENDING)
+  completedAt         DateTime?         @map("completed_at") @db.Timestamptz(6)
+  priority            Float
+  reason              String            @db.Text
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  plan  RoadmapPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  topic Topic?      @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  drive Drive?      @relation(fields: [driveId], references: [id], onDelete: SetNull)
+
+  @@index([planId])
+  @@index([scheduledDate])
+  @@map("roadmap_tasks")
+}
+
+model Feedback {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  collegeId String?  @map("college_id") @db.Uuid
+  role      Role
+  page      String   @db.VarChar(255)
+  message   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user    UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college College?    @relation(fields: [collegeId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("feedback")
+}
+

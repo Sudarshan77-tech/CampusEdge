@@ -270,3 +270,15 @@ export * from './company-utils';
 export * from './drive-state-machine';
 export * from './eligibility-engine';
 export * from './phase2-dtos';
+
+// =============================================================================
+// Phase 3 Exports
+// =============================================================================
+
+export * from './phase3-enums';
+export * from './assessment-config';
+export * from './scoring-engine';
+export * from './mastery-engine';
+export * from './readiness-engine';
+export * from './roadmap-engine';
+export * from './phase3-dtos';

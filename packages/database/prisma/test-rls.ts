@@ -428,6 +428,191 @@ async function testRls() {
     process.exit(1);
   }
 
+  // -------------------------------------------------------------
+  // Test 9: Question Versions Immutability Trigger
+  // -------------------------------------------------------------
+  totalTests++;
+  console.info('\n[Test 9] Testing question_versions immutability trigger...');
+  let versionMutationBlocked = false;
+  try {
+    await prisma.$transaction(async (tx) => {
+      const topic = await tx.topic.findFirst();
+      if (!topic) throw new Error('No topic found');
+      const q = await tx.question.create({
+        data: {
+          scope: 'GLOBAL',
+          topicId: topic.id,
+          textHash: 'hash_test_immutability_' + Date.now(),
+          status: 'DRAFT',
+        },
+      });
+      const v = await tx.questionVersion.create({
+        data: {
+          questionId: q.id,
+          version: 1,
+          stem: 'Original stem',
+          explanation: 'Original explanation',
+        },
+      });
+
+      // Try to mutate stem
+      await tx.$executeRawUnsafe(
+        `UPDATE public.question_versions SET stem = 'Hacked stem' WHERE id = '${v.id}'::uuid;`,
+      );
+    });
+  } catch (err: unknown) {
+    if (String(err).includes('question_versions rows are immutable')) {
+      versionMutationBlocked = true;
+    }
+  }
+
+  if (versionMutationBlocked) {
+    console.info('  ✓ PASS: Database trigger prevented question_versions row mutation.');
+    passedTests++;
+  } else {
+    console.error('  ✗ FAIL: Database allowed question_versions mutation!');
+    process.exit(1);
+  }
+
+  // -------------------------------------------------------------
+  // Test 10: Question Reports Auto-Flag Trigger (>= 3 distinct reports)
+  // -------------------------------------------------------------
+  totalTests++;
+  console.info('\n[Test 10] Testing question_reports auto-flag trigger...');
+  let autoFlagTriggered = false;
+  try {
+    await prisma.$transaction(async (tx) => {
+      const topic = await tx.topic.findFirst();
+      if (!topic) throw new Error('No topic found');
+      const q = await tx.question.create({
+        data: {
+          scope: 'GLOBAL',
+          topicId: topic.id,
+          textHash: 'hash_auto_flag_' + Date.now(),
+          status: 'APPROVED',
+        },
+      });
+
+      const u1 = await tx.userProfile.create({
+        data: {
+          id: '11111111-1111-1111-1111-111111111111',
+          email: 'reporter1_' + Date.now() + '@test.com',
+          fullName: 'Reporter 1',
+          role: 'STUDENT',
+        },
+      });
+      const u2 = await tx.userProfile.create({
+        data: {
+          id: '22222222-2222-2222-2222-222222222222',
+          email: 'reporter2_' + Date.now() + '@test.com',
+          fullName: 'Reporter 2',
+          role: 'STUDENT',
+        },
+      });
+      const u3 = await tx.userProfile.create({
+        data: {
+          id: '33333333-3333-3333-3333-333333333333',
+          email: 'reporter3_' + Date.now() + '@test.com',
+          fullName: 'Reporter 3',
+          role: 'STUDENT',
+        },
+      });
+
+      await tx.questionReport.create({
+        data: { questionId: q.id, reporterId: u1.id, reason: 'WRONG_ANSWER' },
+      });
+      await tx.questionReport.create({
+        data: { questionId: q.id, reporterId: u2.id, reason: 'WRONG_ANSWER' },
+      });
+      await tx.questionReport.create({
+        data: { questionId: q.id, reporterId: u3.id, reason: 'UNCLEAR' },
+      });
+
+      const updatedQ = await tx.question.findUnique({ where: { id: q.id } });
+      if (updatedQ?.status === 'FLAGGED') {
+        autoFlagTriggered = true;
+      }
+      throw new Error('ROLLBACK_INTENTIONAL');
+    });
+  } catch (err: unknown) {
+    if (String(err).includes('ROLLBACK_INTENTIONAL')) {
+      // rollback succeeded
+    }
+  }
+
+  if (autoFlagTriggered) {
+    console.info('  ✓ PASS: Question automatically FLAGGED after 3 distinct reports.');
+    passedTests++;
+  } else {
+    console.error('  ✗ FAIL: Question was not auto-flagged after 3 reports!');
+    process.exit(1);
+  }
+
+  // -------------------------------------------------------------
+  // Test 11: Single IN_PROGRESS Attempt Partial Unique Index
+  // -------------------------------------------------------------
+  totalTests++;
+  console.info('\n[Test 11] Testing single IN_PROGRESS attempt partial unique index...');
+  let duplicateInProgressPrevented = false;
+  try {
+    await prisma.$transaction(async (tx) => {
+      const template = await tx.testTemplate.create({
+        data: {
+          scope: 'COLLEGE',
+          collegeId: DEMO_COLLEGE_ID,
+          kind: 'PRACTICE',
+          title: 'Partial Index Test Template',
+          durationMinutes: 30,
+        },
+      });
+
+      await tx.attempt.create({
+        data: {
+          studentId: studentProfile.id,
+          collegeId: DEMO_COLLEGE_ID,
+          templateId: template.id,
+          kind: 'PRACTICE',
+          status: 'IN_PROGRESS',
+          deadlineAt: new Date(Date.now() + 1800000),
+          seed: 12345,
+        },
+      });
+
+      // Attempt second concurrent IN_PROGRESS attempt
+      await tx.attempt.create({
+        data: {
+          studentId: studentProfile.id,
+          collegeId: DEMO_COLLEGE_ID,
+          templateId: template.id,
+          kind: 'PRACTICE',
+          status: 'IN_PROGRESS',
+          deadlineAt: new Date(Date.now() + 1800000),
+          seed: 54321,
+        },
+      });
+
+      throw new Error('ROLLBACK_INTENTIONAL');
+    });
+  } catch (err: unknown) {
+    const msg = String(err);
+    if (
+      msg.includes('attempts_student_in_progress_key') ||
+      msg.includes('Unique constraint failed')
+    ) {
+      duplicateInProgressPrevented = true;
+    }
+  }
+
+  if (duplicateInProgressPrevented) {
+    console.info(
+      '  ✓ PASS: Partial unique index blocked multiple concurrent IN_PROGRESS attempts.',
+    );
+    passedTests++;
+  } else {
+    console.error('  ✗ FAIL: Multiple concurrent IN_PROGRESS attempts were permitted!');
+    process.exit(1);
+  }
+
   console.info(
     `\n=== All ${passedTests}/${totalTests} RLS & Security Tests PASSED Successfully ===`,
   );

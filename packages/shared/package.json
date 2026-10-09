@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "@campusedge/config": "workspace:*",
+    "fast-check": "^4.10.2",
     "typescript": "^5.8.2",
     "vitest": "^3.0.7"
   }

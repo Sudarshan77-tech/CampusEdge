@@ -462,6 +462,9 @@ importers:
       '@campusedge/config':
         specifier: workspace:*
         version: link:../config
+      fast-check:
+        specifier: ^4.10.2
+        version: 4.10.2
       typescript:
         specifier: ^5.8.2
         version: 5.9.3
@@ -4718,6 +4721,13 @@ packages:
       }
     engines: { node: '>=8.0.0' }
 
+  fast-check@4.10.2:
+    resolution:
+      {
+        integrity: sha512-iK2f+YrcmoeGqk6fA0ea2bptcu/itMIm4NfEozq6N25+aG6h7s5HZbB/k1aV7b5w5sFLMCbbtRUsTVR+BgC3xw==,
+      }
+    engines: { node: '>=12.17.0' }
+
   fast-copy@4.1.2:
     resolution:
       {
@@ -7204,6 +7214,12 @@ packages:
     resolution:
       {
         integrity: sha512-bVWawvoZoBYpp6yIoQtQXHZjmz35RSVHnUOTefl8Vcjr8snTPY1wnpSPMWekcFwbxI6gtmT7rSYPFvz71ldiOA==,
+      }
+
+  pure-rand@8.4.2:
+    resolution:
+      {
+        integrity: sha512-vvuOGgcuPJAirlHvuQw1TrOiw7ptaIXXmIbNuiNOY6lNGJJH49PQ1Kj4nd783nPdQhQdicgOjVI2yI/9BD6/Ng==,
       }
 
   qs@6.16.0:
@@ -11616,6 +11632,10 @@ snapshots:
     dependencies:
       pure-rand: 6.1.0
 
+  fast-check@4.10.2:
+    dependencies:
+      pure-rand: 8.4.2
+
   fast-copy@4.1.2: {}
 
   fast-csv@4.3.6:
@@ -13206,6 +13226,8 @@ snapshots:
   punycode@2.3.1: {}
 
   pure-rand@6.1.0: {}
+
+  pure-rand@8.4.2: {}
 
   qs@6.16.0:
     dependencies:

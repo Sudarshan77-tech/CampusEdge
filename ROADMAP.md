@@ -53,12 +53,15 @@
 
 ## Phase 3: Diagnostics & Readiness Engine (MVP Pilot Target)
 
-- [ ] Question bank architecture (Aptitude, Logical Reasoning, Technical MCQs)
-- [ ] Timed diagnostic test evaluation engine (100% deterministic scoring)
-- [ ] Transparent Readiness Score calculation formula (Aptitude + Core + Academic weightage)
-- [ ] Student performance radar charts and breakdown analytics
-- [ ] Company-specific benchmark comparison ("Am I ready for Company X?")
-- [ ] Pilot readiness launch for cohort testing
+- [x] Part 3A: Schema, RLS, Pure Domain Logic in `packages/shared`, ADRs, and Readiness Documentation
+- [ ] Part 3B: Content Pipeline & Starter Question Bank (>=300 questions, review gate, CSV import)
+- [ ] Part 3C: Test Engine, Attempt Lifecycle, Leakage Defense, Synthetic Load Test (CHECKPOINT 3)
+- [ ] Part 3D: Diagnostic Test, Readiness Engine API & Roadmap Generation
+- [ ] Part 3E: Placement Cell & Super Admin Cockpits
+- [ ] Part 3F: Web UI Pages & Student Assessment Experience
+- [ ] Part 3G: Testing Suite (Leakage Contract, E2E, Load Tests)
+- [ ] Part 3H: Pilot Launch Kit (Manual, Cohort CSVs, TPO Playbook)
+- [ ] Part 3I: Deployment & Production Smoke Tests
 
 ## Phase 4: Company Intelligence & Preparation Blueprints
 
