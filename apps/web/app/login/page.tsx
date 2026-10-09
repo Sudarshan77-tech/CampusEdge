@@ -43,16 +43,19 @@ function LoginForm() {
   const handleRedirect = async () => {
     try {
       const profile = await api.get<UserProfile>('/auth/me');
+      const role = profile.role || (profile as unknown as { data?: UserProfile }).data?.role;
+      const status = profile.status || (profile as unknown as { data?: UserProfile }).data?.status;
+
       if (redirectTo) {
         router.push(redirectTo);
         return;
       }
-      if (profile.role === Role.SUPER_ADMIN) {
+      if (role === Role.SUPER_ADMIN) {
         router.push('/admin/colleges');
-      } else if (profile.role === Role.COLLEGE_ADMIN) {
+      } else if (role === Role.COLLEGE_ADMIN) {
         router.push('/placement-cell/dashboard');
-      } else if (profile.role === Role.STUDENT) {
-        if (profile.status === UserStatus.ONBOARDING) {
+      } else if (role === Role.STUDENT) {
+        if (status === UserStatus.ONBOARDING) {
           router.push('/student/onboarding');
         } else {
           router.push('/student/dashboard');

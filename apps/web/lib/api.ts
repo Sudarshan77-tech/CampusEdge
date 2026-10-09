@@ -46,7 +46,13 @@ export async function apiClient<T = unknown>(
     reqHeaders['Authorization'] = `Bearer ${authToken}`;
   }
 
-  const url = `${API_BASE}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  if (cleanEndpoint === '/auth/me') {
+    cleanEndpoint = '/me';
+  }
+  const base = API_BASE.replace(/\/+$/, '').replace(/\/api\/v1$/, '');
+  const path = cleanEndpoint.startsWith('/api/v1') ? cleanEndpoint : `/api/v1${cleanEndpoint}`;
+  const url = `${base}${path}`;
 
   const res = await fetch(url, {
     ...rest,

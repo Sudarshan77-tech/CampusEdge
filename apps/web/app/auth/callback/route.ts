@@ -15,10 +15,11 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}${next}`);
       }
 
-      // Query /auth/me from NestJS backend to determine destination
+      // Query /api/v1/auth/me from NestJS backend to determine destination
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-        const res = await fetch(`${apiUrl}/auth/me`, {
+        const cleanBase = apiUrl.replace(/\/+$/, '').replace(/\/api\/v1$/, '');
+        const res = await fetch(`${cleanBase}/api/v1/me`, {
           headers: {
             Authorization: `Bearer ${authData.session.access_token}`,
           },
@@ -26,14 +27,17 @@ export async function GET(request: Request) {
 
         if (res.ok) {
           const profile = await res.json();
-          if (profile.role === 'SUPER_ADMIN') {
+          const role = profile.role || profile.data?.role;
+          const status = profile.status || profile.data?.status;
+
+          if (role === 'SUPER_ADMIN') {
             return NextResponse.redirect(`${origin}/admin/colleges`);
           }
-          if (profile.role === 'COLLEGE_ADMIN') {
+          if (role === 'COLLEGE_ADMIN') {
             return NextResponse.redirect(`${origin}/placement-cell/dashboard`);
           }
-          if (profile.role === 'STUDENT') {
-            if (profile.status === 'ONBOARDING') {
+          if (role === 'STUDENT') {
+            if (status === 'ONBOARDING') {
               return NextResponse.redirect(`${origin}/student/onboarding`);
             }
             return NextResponse.redirect(`${origin}/student/dashboard`);

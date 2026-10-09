@@ -5,6 +5,7 @@ import {
   CreateDataRequestDto,
   DataRequestStatus,
   CurrentUser,
+  UserStatus,
 } from '@campusedge/shared';
 
 @Injectable()
@@ -40,7 +41,17 @@ export class StudentsService {
 
     const completionPercentage = Math.round((points / maxPoints) * 100);
 
+    const userProfile = await this.prisma.userProfile.findUnique({
+      where: { id: user.userId },
+      select: { id: true, email: true, fullName: true, role: true, status: true },
+    });
+
     return {
+      id: userProfile?.id || user.userId,
+      email: userProfile?.email || user.email,
+      fullName: userProfile?.fullName,
+      role: userProfile?.role || user.role,
+      status: userProfile?.status || UserStatus.ACTIVE,
       ...studentProfile,
       completionPercentage,
     };

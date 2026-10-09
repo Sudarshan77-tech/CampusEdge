@@ -59,8 +59,10 @@ async function bootstrap() {
     }),
   );
 
-  // Global API Prefix
-  app.setGlobalPrefix('api/v1');
+  // Global API Prefix (excluding auth/me for direct web/auth callbacks)
+  app.setGlobalPrefix('api/v1', {
+    exclude: ['auth/me'],
+  });
 
   // Swagger Documentation (disabled in production)
   if (nodeEnv !== 'production') {
