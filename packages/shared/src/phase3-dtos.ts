@@ -12,6 +12,7 @@ import {
   TestTemplateKind,
   TestTrack,
   AttemptEventType,
+  RoadmapTaskStatus,
 } from './phase3-enums';
 
 // -------------------------------------------------------------
@@ -317,3 +318,16 @@ export const UpdateRoadmapPreferencesSchema = z.object({
 });
 
 export type UpdateRoadmapPreferencesDto = z.infer<typeof UpdateRoadmapPreferencesSchema>;
+
+export const RegenerateRoadmapSchema = z.object({
+  studyHoursPerDay: z.number().min(0.5).max(8.0).optional(),
+  targetDate: z.string().optional().nullable(),
+});
+
+export type RegenerateRoadmapDto = z.infer<typeof RegenerateRoadmapSchema>;
+
+export const UpdateRoadmapTaskStatusSchema = z.object({
+  status: z.nativeEnum(RoadmapTaskStatus),
+});
+
+export type UpdateRoadmapTaskStatusDto = z.infer<typeof UpdateRoadmapTaskStatusSchema>;

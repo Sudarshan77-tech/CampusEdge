@@ -55,6 +55,9 @@ interface MockPrisma {
     findMany: jest.Mock;
     upsert: jest.Mock;
   };
+  studentProfile: {
+    findUnique: jest.Mock;
+  };
   readinessSnapshot: {
     create: jest.Mock;
     findMany: jest.Mock;
@@ -124,6 +127,9 @@ describe('AttemptsService & Zero Leakage Security Contract', () => {
         findMany: jest.fn().mockResolvedValue([]),
         upsert: jest.fn().mockResolvedValue({}),
       },
+      studentProfile: {
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
       readinessSnapshot: {
         create: jest.fn().mockResolvedValue({}),
         findMany: jest.fn().mockResolvedValue([]),
@@ -135,7 +141,11 @@ describe('AttemptsService & Zero Leakage Security Contract', () => {
         }),
     };
 
-    service = new AttemptsService(prisma as unknown as PrismaService);
+    const mockRoadmapService = {
+      generateAndSaveRoadmap: jest.fn().mockResolvedValue({}),
+    };
+
+    service = new AttemptsService(prisma as unknown as PrismaService, mockRoadmapService as any);
   });
 
   describe('startAttempt', () => {

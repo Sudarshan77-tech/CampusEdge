@@ -33,6 +33,7 @@ import {
   generateOptionOrder,
   CandidateQuestion,
 } from '../tests/question-selector';
+import { RoadmapService } from '../analytics/roadmap.service';
 
 export interface StartAttemptDto {
   templateId: string;
@@ -54,7 +55,10 @@ export interface RecordEventDto {
 
 @Injectable()
 export class AttemptsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly roadmapService: RoadmapService,
+  ) {}
 
   /**
    * Start a new test attempt for a student.
@@ -719,7 +723,7 @@ export class AttemptsService {
     const scoreResult = scoreAttempt(attemptItemsForScoring, sectionDefs);
 
     // Save item results, attempt score, topic stats, and readiness snapshot
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // 1. Update items with isCorrect and marksAwarded
       for (const it of items) {
         const scored = itemResultsMap.get(it.id);
@@ -836,7 +840,8 @@ export class AttemptsService {
           scoredCount: st.scoredCount,
         }));
 
-      const hasCompletedDiagnostic = !!(await tx.attempt.findFirst({
+      const isCurrentDiagnostic = attempt.kind === TestTemplateKind.DIAGNOSTIC;
+      const previouslyCompletedDiagnostic = !!(await tx.attempt.findFirst({
         where: {
           studentId: attempt.studentId,
           kind: TestTemplateKind.DIAGNOSTIC,
@@ -844,6 +849,12 @@ export class AttemptsService {
         },
         select: { id: true },
       }));
+      const hasCompletedDiagnostic = isCurrentDiagnostic || previouslyCompletedDiagnostic;
+
+      const studentProfile = await tx.studentProfile.findUnique({
+        where: { userId: attempt.studentId },
+      });
+      const track = (studentProfile?.technicalTrack as TechnicalTrack) || TechnicalTrack.SOFTWARE;
 
       const recentMocks =
         (await tx.attempt.findMany({
@@ -857,8 +868,24 @@ export class AttemptsService {
           take: 5,
         })) || [];
 
+      // Compute active practice days in last 14 days
+      const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+      const recentItems = await tx.attemptItem.findMany({
+        where: {
+          attempt: { studentId: attempt.studentId },
+          answeredAt: { gte: fourteenDaysAgo },
+        },
+        select: { answeredAt: true },
+      });
+      const activeDaysSet = new Set(
+        recentItems
+          .map((i) => (i.answeredAt ? i.answeredAt.toISOString().split('T')[0] : null))
+          .filter(Boolean),
+      );
+      const activeDaysInLast14Days = Math.max(1, activeDaysSet.size);
+
       const readiness = computeReadiness({
-        track: TechnicalTrack.SOFTWARE,
+        track,
         hasCompletedDiagnostic,
         aptitudeTopics,
         technicalTopics,
@@ -866,7 +893,7 @@ export class AttemptsService {
           percent: m.percent,
           submittedAt: m.submittedAt || new Date(),
         })),
-        activeDaysInLast14Days: 1,
+        activeDaysInLast14Days,
         totalScoredItems: allTopicStats.reduce((sum, st) => sum + st.scoredCount, 0),
       });
 
@@ -890,8 +917,21 @@ export class AttemptsService {
         totalMarks: updatedAttempt.totalMarks,
         percent: updatedAttempt.percent,
         sectionScores: updatedAttempt.sectionScores,
+        isDiagnostic: isCurrentDiagnostic,
       };
     });
+
+    // Auto-generate 4-week roadmap upon diagnostic completion if needed
+    if (result.isDiagnostic) {
+      try {
+        await this.roadmapService.generateAndSaveRoadmap(attempt.studentId, attempt.collegeId);
+      } catch (err) {
+        // Log roadmap generation warning but don't fail score return
+        console.warn('Roadmap auto-generation on diagnostic completion:', err);
+      }
+    }
+
+    return result;
   }
 
   /**

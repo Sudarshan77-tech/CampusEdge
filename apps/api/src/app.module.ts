@@ -22,6 +22,8 @@ import { ImportsModule } from './imports/imports.module';
 import { QuestionsModule } from './questions/questions.module';
 import { TestsModule } from './tests/tests.module';
 import { AttemptsModule } from './attempts/attempts.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { DiagnosticsModule } from './diagnostics/diagnostics.module';
 import { PrismaService } from './prisma.service';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
@@ -57,6 +59,8 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     QuestionsModule,
     TestsModule,
     AttemptsModule,
+    AnalyticsModule,
+    DiagnosticsModule,
   ],
   providers: [
     PrismaService,
