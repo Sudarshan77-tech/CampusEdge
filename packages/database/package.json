@@ -21,7 +21,8 @@
     "db:verify-rls:remote": "dotenv -e ../../apps/api/.env -- tsx prisma/verify-rls.ts",
     "db:test-rls": "dotenv -e ../../apps/api/.env.local -- tsx prisma/test-rls.ts",
     "db:test-rls:remote": "dotenv -e ../../apps/api/.env -- tsx prisma/test-rls.ts",
-    "db:seed:dev-users": "dotenv -e ../../apps/api/.env -- tsx prisma/seed-dev-users.ts"
+    "db:seed:dev-users": "dotenv -e ../../apps/api/.env -- tsx prisma/seed-dev-users.ts",
+    "storage:setup": "dotenv -e ../../apps/api/.env -- tsx prisma/setup-storage.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",

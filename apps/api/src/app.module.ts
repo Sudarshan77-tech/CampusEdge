@@ -10,6 +10,15 @@ import { AdminModule } from './admin/admin.module';
 import { CollegesModule } from './colleges/colleges.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { StudentsModule } from './students/students.module';
+import { CompaniesModule } from './companies/companies.module';
+import { SeasonsModule } from './seasons/seasons.module';
+import { DrivesModule } from './drives/drives.module';
+import { ApplicationsModule } from './applications/applications.module';
+import { TopicsModule } from './topics/topics.module';
+import { NoticesModule } from './notices/notices.module';
+import { ExperiencesModule } from './experiences/experiences.module';
+import { IntelligenceModule } from './intelligence/intelligence.module';
+import { ImportsModule } from './imports/imports.module';
 import { PrismaService } from './prisma.service';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
@@ -32,6 +41,15 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     CollegesModule,
     OnboardingModule,
     StudentsModule,
+    CompaniesModule,
+    SeasonsModule,
+    DrivesModule,
+    ApplicationsModule,
+    TopicsModule,
+    NoticesModule,
+    ExperiencesModule,
+    IntelligenceModule,
+    ImportsModule,
   ],
   providers: [
     PrismaService,
