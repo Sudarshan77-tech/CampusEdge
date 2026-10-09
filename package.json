@@ -26,6 +26,7 @@
     "content:validate": "pnpm --filter @campusedge/database content:validate",
     "content:seed:dev": "pnpm --filter @campusedge/database content:seed:dev",
     "storage:setup": "pnpm --filter @campusedge/database storage:setup",
+    "perf:attempts": "pnpm --filter @campusedge/database perf:attempts",
     "admin:create-super-admin": "pnpm --filter @campusedge/api admin:create-super-admin",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",

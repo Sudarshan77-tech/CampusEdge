@@ -31,7 +31,8 @@
     "content:validate": "tsx prisma/validate-content.ts",
     "content:seed:dev": "dotenv -e ../../apps/api/.env.local -- tsx prisma/seed-starter-questions.ts",
     "content:seed:remote": "dotenv -e ../../apps/api/.env -- tsx prisma/seed-starter-questions.ts",
-    "storage:setup": "dotenv -e ../../apps/api/.env -- tsx prisma/setup-storage.ts"
+    "storage:setup": "dotenv -e ../../apps/api/.env -- tsx prisma/setup-storage.ts",
+    "perf:attempts": "dotenv -e ../../apps/api/.env.local -- tsx prisma/perf-attempts.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",
