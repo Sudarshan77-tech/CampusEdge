@@ -277,6 +277,157 @@ async function testRls() {
     process.exit(1);
   }
 
+  // -------------------------------------------------------------
+  // Test 6: Composite Foreign Key Blocks Cross-College References
+  // -------------------------------------------------------------
+  totalTests++;
+  console.info('\n[Test 6] Testing Composite FK: Cross-tenant reference prevention...');
+  let crossTenantBlocked = false;
+  const FOREIGN_COLLEGE_ID = '99999999-9999-9999-9999-999999999999';
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      // 1. Create a foreign college and placement season
+      await tx.college.create({
+        data: {
+          id: FOREIGN_COLLEGE_ID,
+          name: 'Foreign University',
+          slug: 'foreign-univ-sec-test',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+        },
+      });
+
+      const foreignSeason = await tx.placementSeason.create({
+        data: {
+          collegeId: FOREIGN_COLLEGE_ID,
+          label: '2026-27-SEC',
+          batchYear: 2027,
+          startDate: new Date('2026-07-01'),
+          endDate: new Date('2027-06-30'),
+        },
+      });
+
+      const testCompany = await tx.company.create({
+        data: {
+          name: 'Security Test Corp',
+          normalizedName: 'security test corp',
+          slug: 'security-test-corp-' + Date.now(),
+          status: 'VERIFIED',
+        },
+      });
+
+      // 2. Try to create a Drive under DEMO_COLLEGE referencing foreignSeason
+      // Composite FK (season_id, college_id) must reject this!
+      await tx.$executeRawUnsafe(`
+        INSERT INTO public.drives (
+          id, college_id, company_id, season_id, title, drive_type, category, status
+        ) VALUES (
+          gen_random_uuid(),
+          '${DEMO_COLLEGE_ID}'::uuid,
+          '${testCompany.id}'::uuid,
+          '${foreignSeason.id}'::uuid,
+          'Illicit Cross-Tenant Drive',
+          'ON_CAMPUS',
+          'REGULAR',
+          'DRAFT'
+        );
+      `);
+
+      throw new Error('ROLLBACK_INTENTIONAL');
+    });
+  } catch (err: unknown) {
+    const msg = String(err);
+    if (
+      msg.includes('drives_season_id_college_id_fkey') ||
+      msg.includes('foreign key constraint') ||
+      (err as Record<string, unknown>)?.code === 'P2003'
+    ) {
+      crossTenantBlocked = true;
+    } else if (msg.includes('ROLLBACK_INTENTIONAL')) {
+      crossTenantBlocked = false;
+    } else {
+      console.warn('Caught unexpected error in Test 6:', msg);
+    }
+  }
+
+  if (crossTenantBlocked) {
+    console.info('  ✓ PASS: Composite FK blocked cross-tenant season reference.');
+    passedTests++;
+  } else {
+    console.error('  ✗ FAIL: Cross-tenant reference was permitted by database schema!');
+    process.exit(1);
+  }
+
+  // -------------------------------------------------------------
+  // Test 7: CHECK Constraints Validation (CTC min <= max, selected <= registered)
+  // -------------------------------------------------------------
+  totalTests++;
+  console.info('\n[Test 7] Testing Database CHECK constraints...');
+  let ctcCheckFired = false;
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const company = await tx.company.create({
+        data: {
+          name: 'Check Constraint Corp',
+          normalizedName: 'check constraint corp',
+          slug: 'check-constraint-corp-' + Date.now(),
+          status: 'VERIFIED',
+        },
+      });
+
+      const season = await tx.placementSeason.create({
+        data: {
+          collegeId: DEMO_COLLEGE_ID,
+          label: '2026-27-CHK',
+          batchYear: 2027,
+          startDate: new Date('2026-07-01'),
+          endDate: new Date('2027-06-30'),
+        },
+      });
+
+      const drive = await tx.drive.create({
+        data: {
+          collegeId: DEMO_COLLEGE_ID,
+          companyId: company.id,
+          seasonId: season.id,
+          title: 'Check Constraint Test Drive',
+        },
+      });
+
+      // Attempt to insert invalid CTC where min > max
+      await tx.$executeRawUnsafe(`
+        INSERT INTO public.drive_roles (
+          id, drive_id, college_id, title, job_type, ctc_lpa_min, ctc_lpa_max
+        ) VALUES (
+          gen_random_uuid(),
+          '${drive.id}'::uuid,
+          '${DEMO_COLLEGE_ID}'::uuid,
+          'Test Role',
+          'FULL_TIME',
+          25.00,
+          15.00
+        );
+      `);
+
+      throw new Error('ROLLBACK_INTENTIONAL');
+    });
+  } catch (err: unknown) {
+    const msg = String(err);
+    if (msg.includes('drive_roles_ctc_check') || msg.includes('check constraint')) {
+      ctcCheckFired = true;
+    }
+  }
+
+  if (ctcCheckFired) {
+    console.info('  ✓ PASS: Database CHECK constraint enforced ctc_lpa_min <= ctc_lpa_max.');
+    passedTests++;
+  } else {
+    console.error('  ✗ FAIL: Database allowed invalid CTC range (min > max)!');
+    process.exit(1);
+  }
+
   console.info(
     `\n=== All ${passedTests}/${totalTests} RLS & Security Tests PASSED Successfully ===`,
   );

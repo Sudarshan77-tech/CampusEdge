@@ -1,5 +1,6 @@
 -- Minimal Supabase auth schema stub for CI and integration tests on plain PostgreSQL
 CREATE SCHEMA IF NOT EXISTS auth;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- Roles required for Supabase RLS and PostgREST permissions
 DO $$

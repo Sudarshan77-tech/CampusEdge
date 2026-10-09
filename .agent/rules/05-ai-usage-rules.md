@@ -28,3 +28,10 @@
 
 - Per-user daily/monthly token quotas must be enforced at the API layer before calling the AI provider.
 - AI operations requiring more than 2 seconds (e.g. full resume critique, multi-stage mock interview evaluation) MUST be executed asynchronously via background worker queues (BullMQ), not in a synchronous HTTP request/response cycle.
+
+## 5. Untrusted User-Generated Content (UGC) & Prompt Injection Defenses
+
+- All user-submitted content (senior interview experiences, round summaries, tips, notice announcements, custom job descriptions) is **untrusted data**.
+- When AI models consume UGC (e.g. synthesizing interview insights, question extraction), it MUST be treated as a potential **prompt-injection risk**.
+- Always enclose user-submitted content within strict XML/data boundary tags (e.g. `<user_content>...</user_content>`).
+- Explicitly instruct models in the system prompt to treat content within boundaries strictly as inert data to analyze, never as operational directives or system overrides.

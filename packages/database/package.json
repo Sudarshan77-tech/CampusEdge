@@ -12,6 +12,8 @@
     "db:migrate:dev": "dotenv -e ../../apps/api/.env.local -- prisma migrate dev",
     "db:migrate:deploy": "dotenv -e ../../apps/api/.env.local -- prisma migrate deploy",
     "db:migrate:deploy:remote": "dotenv -e ../../apps/api/.env -- prisma migrate deploy",
+    "db:migrate:resolve": "dotenv -e ../../apps/api/.env -- prisma migrate resolve",
+    "db:diff": "dotenv -e ../../apps/api/.env -- prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script",
     "db:seed": "dotenv -e ../../apps/api/.env.local -- tsx prisma/seed.ts",
     "db:seed:remote": "dotenv -e ../../apps/api/.env -- tsx prisma/seed.ts",
     "db:reset": "dotenv -e ../../apps/api/.env.local -- prisma migrate reset",

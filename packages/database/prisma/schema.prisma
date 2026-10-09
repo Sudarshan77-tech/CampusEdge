@@ -75,6 +75,7 @@ enum ConsentType {
   TERMS
   PRIVACY
   DATA_PROCESSING
+  PLACEMENT_SHARING
 
   @@map("consent_type_enum")
 }
@@ -95,6 +96,156 @@ enum DataRequestStatus {
   @@map("data_request_status_enum")
 }
 
+enum CompanyStatus {
+  PENDING_REVIEW
+  VERIFIED
+  REJECTED
+  MERGED
+
+  @@map("company_status_enum")
+}
+
+enum TopicCategory {
+  APTITUDE
+  VERBAL
+  LOGICAL
+  DSA
+  PROGRAMMING
+  DBMS
+  SQL
+  OS
+  NETWORKS
+  OOP
+  SOFTWARE_ENGINEERING
+  SYSTEM_DESIGN
+  HR
+  OTHER
+
+  @@map("topic_category_enum")
+}
+
+enum DriveType {
+  ON_CAMPUS
+  OFF_CAMPUS
+  POOL
+  VIRTUAL
+
+  @@map("drive_type_enum")
+}
+
+enum DriveCategory {
+  MASS_RECRUITER
+  REGULAR
+  DREAM
+  SUPER_DREAM
+
+  @@map("drive_category_enum")
+}
+
+enum DriveStatus {
+  DRAFT
+  PUBLISHED
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+
+  @@map("drive_status_enum")
+}
+
+enum JobType {
+  FULL_TIME
+  INTERNSHIP
+  INTERN_PLUS_PPO
+
+  @@map("job_type_enum")
+}
+
+enum RoundType {
+  APTITUDE
+  TECHNICAL_MCQ
+  CODING
+  GROUP_DISCUSSION
+  TECHNICAL_INTERVIEW
+  HR_INTERVIEW
+  MANAGERIAL
+  CASE_STUDY
+  OTHER
+
+  @@map("round_type_enum")
+}
+
+enum RoundMode {
+  ONLINE
+  OFFLINE
+
+  @@map("round_mode_enum")
+}
+
+enum ApplicationStatus {
+  REGISTERED
+  WITHDRAWN
+  SHORTLISTED
+  SELECTED
+  REJECTED
+
+  @@map("application_status_enum")
+}
+
+enum NoticeAudience {
+  ALL
+  BY_BRANCH
+  BY_BATCH_YEAR
+
+  @@map("notice_audience_enum")
+}
+
+enum NoticeStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+
+  @@map("notice_status_enum")
+}
+
+enum ExperienceOutcome {
+  SELECTED
+  NOT_SELECTED
+  NOT_DISCLOSED
+
+  @@map("experience_outcome_enum")
+}
+
+enum ExperienceStatus {
+  DRAFT
+  SUBMITTED
+  CHANGES_REQUESTED
+  APPROVED
+  REJECTED
+  UNDER_REVIEW
+  REMOVED
+
+  @@map("experience_status_enum")
+}
+
+enum ImportJobType {
+  HISTORICAL_DRIVES
+  APPLICATION_RESULTS
+
+  @@map("import_job_type_enum")
+}
+
+enum ImportJobStatus {
+  UPLOADED
+  VALIDATED
+  FAILED
+  COMMITTING
+  COMPLETED
+
+  @@map("import_job_status_enum")
+}
+
 model College {
   id                     String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                   String        @db.VarChar(255)
@@ -104,16 +255,26 @@ model College {
   status                 CollegeStatus @default(PENDING)
   emailDomains           String[]      @default([]) @map("email_domains")
   requireStudentApproval Boolean       @default(false) @map("require_student_approval")
+  enforceOneOfferPolicy  Boolean       @default(false) @map("enforce_one_offer_policy")
   contactEmail           String?       @map("contact_email") @db.VarChar(255)
   createdAt              DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt              DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  userProfiles    UserProfile[]
-  auditLogs       AuditLog[]
-  branches        Branch[]
-  invitations     Invitation[]
-  studentProfiles StudentProfile[]
-  studentSkills   StudentSkill[]
+  userProfiles        UserProfile[]
+  auditLogs           AuditLog[]
+  branches            Branch[]
+  invitations         Invitation[]
+  studentProfiles     StudentProfile[]
+  studentSkills       StudentSkill[]
+  placementSeasons    PlacementSeason[]
+  drives              Drive[]
+  driveRoles          DriveRole[]
+  driveEligibilities  DriveEligibility[]
+  driveRounds         DriveRound[]
+  driveApplications   DriveApplication[]
+  notices             Notice[]
+  experiences         Experience[]
+  importJobs          ImportJob[]
 
   @@map("colleges")
 }
@@ -146,8 +307,9 @@ model Branch {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  college         College          @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  studentProfiles StudentProfile[]
+  college               College                @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  studentProfiles       StudentProfile[]
+  driveEligibleBranches DriveEligibleBranch[]
 
   @@unique([collegeId, code])
   @@unique([id, collegeId])
@@ -188,12 +350,15 @@ model StudentProfile {
   createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  userProfile   UserProfile    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  college       College        @relation(fields: [collegeId], references: [id], onDelete: Restrict)
-  branch        Branch         @relation(fields: [branchId, collegeId], references: [id, collegeId], onDelete: Restrict)
-  studentSkills StudentSkill[]
+  userProfile       UserProfile        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college           College            @relation(fields: [collegeId], references: [id], onDelete: Restrict)
+  branch            Branch             @relation(fields: [branchId, collegeId], references: [id, collegeId], onDelete: Restrict)
+  studentSkills     StudentSkill[]
+  driveApplications DriveApplication[]
+  experiences       Experience[]
 
   @@unique([collegeId, enrollmentNumber])
+  @@unique([userId, collegeId])
   @@index([collegeId])
   @@index([branchId])
   @@map("student_profiles")
@@ -206,7 +371,8 @@ model Skill {
   createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  studentSkills StudentSkill[]
+  studentSkills   StudentSkill[]
+  driveRoleSkills DriveRoleSkill[]
 
   @@map("skills")
 }
@@ -218,7 +384,7 @@ model StudentSkill {
   proficiency Proficiency @default(BEGINNER)
   createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  studentProfile StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  studentProfile StudentProfile @relation(fields: [studentId, collegeId], references: [userId, collegeId], onDelete: Cascade)
   skill          Skill          @relation(fields: [skillId], references: [id], onDelete: Restrict)
   college        College        @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
@@ -231,6 +397,7 @@ model StudentSkill {
 model ConsentRecord {
   id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId        String      @map("user_id") @db.Uuid
+  driveId       String?     @map("drive_id") @db.Uuid
   consentType   ConsentType @map("consent_type")
   policyVersion String      @map("policy_version") @db.VarChar(20)
   ipAddress     String?     @map("ip_address") @db.VarChar(45)
@@ -238,8 +405,10 @@ model ConsentRecord {
   createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
 
   userProfile UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  drive       Drive?       @relation(fields: [driveId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([driveId])
   @@map("consent_records")
 }
 
@@ -276,4 +445,423 @@ model AuditLog {
   @@index([collegeId])
   @@index([actorId])
   @@map("audit_logs")
+}
+
+// =============================================================================
+// Phase 2 Models
+// =============================================================================
+
+model Company {
+  id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String        @db.VarChar(255)
+  normalizedName     String        @unique @map("normalized_name") @db.VarChar(255)
+  slug               String        @unique @db.VarChar(100)
+  website            String?       @db.VarChar(255)
+  industry           String?       @db.VarChar(100)
+  logoUrl            String?       @map("logo_url") @db.VarChar(500)
+  status             CompanyStatus @default(PENDING_REVIEW)
+  mergedIntoId       String?       @map("merged_into_id") @db.Uuid
+  createdByCollegeId String?       @map("created_by_college_id") @db.Uuid
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  mergedInto  Company?     @relation("CompanyMerges", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedFrom  Company[]    @relation("CompanyMerges")
+  drives      Drive[]
+  experiences Experience[]
+
+  @@index([status])
+  @@map("companies")
+}
+
+model Topic {
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String        @unique @db.VarChar(100)
+  slug      String        @unique @db.VarChar(100)
+  category  TopicCategory
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  driveRoundTopics      DriveRoundTopic[]
+  experienceRoundTopics ExperienceRoundTopic[]
+
+  @@map("topics")
+}
+
+model PlacementSeason {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  collegeId  String   @map("college_id") @db.Uuid
+  label      String   @db.VarChar(50)
+  batchYear  Int      @map("batch_year")
+  startDate  DateTime @map("start_date") @db.Timestamptz(6)
+  endDate    DateTime @map("end_date") @db.Timestamptz(6)
+  isCurrent  Boolean  @default(false) @map("is_current")
+  rowVersion Int      @default(1) @map("row_version")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  drives  Drive[]
+
+  @@unique([collegeId, label])
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@map("placement_seasons")
+}
+
+model Drive {
+  id                   String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  collegeId            String        @map("college_id") @db.Uuid
+  companyId            String        @map("company_id") @db.Uuid
+  seasonId             String        @map("season_id") @db.Uuid
+  title                String        @db.VarChar(255)
+  description          String?       @db.Text
+  driveType            DriveType     @default(ON_CAMPUS) @map("drive_type")
+  category             DriveCategory @default(REGULAR)
+  status               DriveStatus   @default(DRAFT)
+  isHistorical         Boolean       @default(false) @map("is_historical")
+  visitDate            DateTime?     @map("visit_date") @db.Timestamptz(6)
+  registrationOpensAt  DateTime?     @map("registration_opens_at") @db.Timestamptz(6)
+  registrationDeadline DateTime?     @map("registration_deadline") @db.Timestamptz(6)
+  venue                String?       @db.VarChar(255)
+  registeredCount      Int?          @map("registered_count")
+  shortlistedCount     Int?          @map("shortlisted_count")
+  selectedCount        Int?          @map("selected_count")
+  createdBy            String?       @map("created_by") @db.Uuid
+  rowVersion           Int           @default(1) @map("row_version")
+  createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  college        College           @relation(fields: [collegeId], references: [id], onDelete: Restrict)
+  company        Company           @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  season         PlacementSeason   @relation(fields: [seasonId, collegeId], references: [id, collegeId], onDelete: Restrict)
+  roles          DriveRole[]
+  eligibility    DriveEligibility?
+  rounds         DriveRound[]
+  applications   DriveApplication[]
+  notices        Notice[]
+  experiences    Experience[]
+  consentRecords ConsentRecord[]
+
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@index([companyId])
+  @@index([seasonId])
+  @@index([status])
+  @@map("drives")
+}
+
+model DriveRole {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  driveId        String    @map("drive_id") @db.Uuid
+  collegeId      String    @map("college_id") @db.Uuid
+  title          String    @db.VarChar(100)
+  jobType        JobType   @default(FULL_TIME) @map("job_type")
+  ctcLpaMin      Decimal   @map("ctc_lpa_min") @db.Decimal(6, 2)
+  ctcLpaMax      Decimal   @map("ctc_lpa_max") @db.Decimal(6, 2)
+  stipendMonthly Int?      @map("stipend_monthly")
+  location       String?   @db.VarChar(100)
+  openings       Int?
+  bondMonths     Int?      @map("bond_months")
+  description    String?   @db.Text
+  rowVersion     Int       @default(1) @map("row_version")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  drive        Drive              @relation(fields: [driveId, collegeId], references: [id, collegeId], onDelete: Cascade)
+  college      College            @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  skills       DriveRoleSkill[]
+  applications DriveApplication[]
+
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@index([driveId])
+  @@map("drive_roles")
+}
+
+model DriveRoleSkill {
+  driveRoleId String   @map("drive_role_id") @db.Uuid
+  skillId     String   @map("skill_id") @db.Uuid
+  collegeId   String   @map("college_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  driveRole DriveRole @relation(fields: [driveRoleId, collegeId], references: [id, collegeId], onDelete: Cascade)
+  skill     Skill     @relation(fields: [skillId], references: [id], onDelete: Restrict)
+
+  @@id([driveRoleId, skillId])
+  @@index([collegeId])
+  @@map("drive_role_skills")
+}
+
+model DriveEligibility {
+  driveId           String   @id @map("drive_id") @db.Uuid
+  collegeId         String   @map("college_id") @db.Uuid
+  minCgpa           Decimal? @map("min_cgpa") @db.Decimal(4, 2)
+  maxActiveBacklogs Int?     @map("max_active_backlogs")
+  allowedDegrees    Degree[] @default([]) @map("allowed_degrees")
+  allowedBatchYears Int[]    @default([]) @map("allowed_batch_years")
+  notes             String?  @db.Text
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  drive            Drive                 @relation(fields: [driveId, collegeId], references: [id, collegeId], onDelete: Cascade)
+  college          College               @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  eligibleBranches DriveEligibleBranch[]
+
+  @@unique([driveId, collegeId])
+  @@index([collegeId])
+  @@map("drive_eligibilities")
+}
+
+model DriveEligibleBranch {
+  driveId   String   @map("drive_id") @db.Uuid
+  branchId  String   @map("branch_id") @db.Uuid
+  collegeId String   @map("college_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  eligibility DriveEligibility @relation(fields: [driveId, collegeId], references: [driveId, collegeId], onDelete: Cascade)
+  branch      Branch           @relation(fields: [branchId, collegeId], references: [id, collegeId], onDelete: Cascade)
+
+  @@id([driveId, branchId])
+  @@index([collegeId])
+  @@map("drive_eligible_branches")
+}
+
+model DriveRound {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  driveId         String    @map("drive_id") @db.Uuid
+  collegeId       String    @map("college_id") @db.Uuid
+  sequence        Int
+  roundType       RoundType @map("round_type")
+  title           String    @db.VarChar(100)
+  durationMinutes Int?      @map("duration_minutes")
+  difficulty      Int?
+  mode            RoundMode @default(ONLINE)
+  platformNote    String?   @map("platform_note") @db.VarChar(255)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  drive   Drive             @relation(fields: [driveId, collegeId], references: [id, collegeId], onDelete: Cascade)
+  college College           @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  topics  DriveRoundTopic[]
+
+  @@unique([driveId, sequence])
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@index([driveId])
+  @@map("drive_rounds")
+}
+
+model DriveRoundTopic {
+  roundId   String   @map("round_id") @db.Uuid
+  topicId   String   @map("topic_id") @db.Uuid
+  collegeId String   @map("college_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  round DriveRound @relation(fields: [roundId, collegeId], references: [id, collegeId], onDelete: Cascade)
+  topic Topic      @relation(fields: [topicId], references: [id], onDelete: Restrict)
+
+  @@id([roundId, topicId])
+  @@index([collegeId])
+  @@map("drive_round_topics")
+}
+
+model DriveApplication {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  driveId         String            @map("drive_id") @db.Uuid
+  studentId       String            @map("student_id") @db.Uuid
+  collegeId       String            @map("college_id") @db.Uuid
+  status          ApplicationStatus @default(REGISTERED)
+  offeredRoleId   String?           @map("offered_role_id") @db.Uuid
+  offeredCtcLpa   Decimal?          @map("offered_ctc_lpa") @db.Decimal(6, 2)
+  statusUpdatedBy String?           @map("status_updated_by") @db.Uuid
+  statusUpdatedAt DateTime?         @map("status_updated_at") @db.Timestamptz(6)
+  rowVersion      Int               @default(1) @map("row_version")
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  drive       Drive          @relation(fields: [driveId, collegeId], references: [id, collegeId], onDelete: Cascade)
+  student     StudentProfile @relation(fields: [studentId, collegeId], references: [userId, collegeId], onDelete: Cascade)
+  college     College        @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  offeredRole DriveRole?     @relation(fields: [offeredRoleId, collegeId], references: [id, collegeId], onDelete: SetNull)
+
+  @@unique([driveId, studentId])
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@index([studentId])
+  @@index([status])
+  @@map("drive_applications")
+}
+
+model Notice {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  collegeId        String         @map("college_id") @db.Uuid
+  title            String         @db.VarChar(255)
+  body             String         @db.Text
+  audience         NoticeAudience @default(ALL)
+  targetBranchIds  String[]       @default([]) @map("target_branch_ids")
+  targetBatchYears Int[]          @default([]) @map("target_batch_years")
+  driveId          String?        @map("drive_id") @db.Uuid
+  status           NoticeStatus   @default(DRAFT)
+  isPinned         Boolean        @default(false) @map("is_pinned")
+  publishedAt      DateTime?      @map("published_at") @db.Timestamptz(6)
+  expiresAt        DateTime?      @map("expires_at") @db.Timestamptz(6)
+  createdBy        String?        @map("created_by") @db.Uuid
+  rowVersion       Int            @default(1) @map("row_version")
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  college     College            @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  drive       Drive?             @relation(fields: [driveId, collegeId], references: [id, collegeId], onDelete: SetNull)
+  attachments NoticeAttachment[]
+
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@index([status])
+  @@map("notices")
+}
+
+model NoticeAttachment {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  noticeId    String   @map("notice_id") @db.Uuid
+  collegeId   String   @map("college_id") @db.Uuid
+  storagePath String   @map("storage_path") @db.VarChar(500)
+  fileName    String   @map("file_name") @db.VarChar(255)
+  mimeType    String   @map("mime_type") @db.VarChar(100)
+  sizeBytes   Int      @map("size_bytes")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  notice Notice @relation(fields: [noticeId, collegeId], references: [id, collegeId], onDelete: Cascade)
+
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@index([noticeId])
+  @@map("notice_attachments")
+}
+
+model Experience {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  collegeId      String            @map("college_id") @db.Uuid
+  companyId      String            @map("company_id") @db.Uuid
+  driveId        String?           @map("drive_id") @db.Uuid
+  authorId       String            @map("author_id") @db.Uuid
+  roleTitle      String            @map("role_title") @db.VarChar(100)
+  seasonLabel    String            @map("season_label") @db.VarChar(50)
+  difficulty     Int
+  outcome        ExperienceOutcome
+  overallSummary String            @map("overall_summary") @db.Text
+  tips           String?           @db.Text
+  isAnonymous    Boolean           @default(true) @map("is_anonymous")
+  status         ExperienceStatus  @default(DRAFT)
+  reviewerId     String?           @map("reviewer_id") @db.Uuid
+  reviewNote     String?           @map("review_note") @db.Text
+  reviewedAt     DateTime?         @map("reviewed_at") @db.Timestamptz(6)
+  rowVersion     Int               @default(1) @map("row_version")
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  college College            @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  company Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  drive   Drive?             @relation(fields: [driveId, collegeId], references: [id, collegeId], onDelete: SetNull)
+  author  StudentProfile     @relation(fields: [authorId, collegeId], references: [userId, collegeId], onDelete: Cascade)
+  rounds  ExperienceRound[]
+  reports ExperienceReport[]
+
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@index([companyId])
+  @@index([status])
+  @@map("experiences")
+}
+
+model ExperienceRound {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  experienceId String    @map("experience_id") @db.Uuid
+  collegeId    String    @map("college_id") @db.Uuid
+  sequence     Int
+  roundType    RoundType @map("round_type")
+  description  String    @db.Text
+  difficulty   Int?
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  experience Experience             @relation(fields: [experienceId, collegeId], references: [id, collegeId], onDelete: Cascade)
+  topics     ExperienceRoundTopic[]
+
+  @@unique([experienceId, sequence])
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@map("experience_rounds")
+}
+
+model ExperienceRoundTopic {
+  roundId   String   @map("round_id") @db.Uuid
+  topicId   String   @map("topic_id") @db.Uuid
+  collegeId String   @map("college_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  round ExperienceRound @relation(fields: [roundId, collegeId], references: [id, collegeId], onDelete: Cascade)
+  topic Topic           @relation(fields: [topicId], references: [id], onDelete: Restrict)
+
+  @@id([roundId, topicId])
+  @@index([collegeId])
+  @@map("experience_round_topics")
+}
+
+model ExperienceReport {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  experienceId String   @map("experience_id") @db.Uuid
+  reporterId   String   @map("reporter_id") @db.Uuid
+  collegeId    String   @map("college_id") @db.Uuid
+  reason       String   @db.VarChar(500)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  experience Experience @relation(fields: [experienceId, collegeId], references: [id, collegeId], onDelete: Cascade)
+
+  @@unique([experienceId, reporterId])
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@map("experience_reports")
+}
+
+model ImportJob {
+  id          String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  collegeId   String          @map("college_id") @db.Uuid
+  type        ImportJobType
+  status      ImportJobStatus @default(UPLOADED)
+  fileHash    String          @map("file_hash") @db.VarChar(64)
+  storagePath String?         @map("storage_path") @db.VarChar(500)
+  totalRows   Int             @default(0) @map("total_rows")
+  validRows   Int             @default(0) @map("valid_rows")
+  errorCount  Int             @default(0) @map("error_count")
+  options     Json?           @db.JsonB
+  summary     Json?           @db.JsonB
+  createdBy   String?         @map("created_by") @db.Uuid
+  committedAt DateTime?       @map("committed_at") @db.Timestamptz(6)
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  college   College          @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  rowErrors ImportRowError[]
+
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@index([fileHash])
+  @@map("import_jobs")
+}
+
+model ImportRowError {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId     String   @map("job_id") @db.Uuid
+  collegeId String   @map("college_id") @db.Uuid
+  rowNumber Int      @map("row_number")
+  column    String?  @db.VarChar(100)
+  message   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  job ImportJob @relation(fields: [jobId, collegeId], references: [id, collegeId], onDelete: Cascade)
+
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@index([jobId])
+  @@map("import_row_errors")
 }

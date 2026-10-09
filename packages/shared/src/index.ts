@@ -57,6 +57,7 @@ export enum ConsentType {
   TERMS = 'TERMS',
   PRIVACY = 'PRIVACY',
   DATA_PROCESSING = 'DATA_PROCESSING',
+  PLACEMENT_SHARING = 'PLACEMENT_SHARING',
 }
 
 export enum DataRequestType {
@@ -79,6 +80,7 @@ export const POLICY_VERSIONS = {
   TERMS: '1.0',
   PRIVACY: '1.0',
   DATA_PROCESSING: '1.0',
+  PLACEMENT_SHARING: '1.0',
 } as const;
 
 // =============================================================================
@@ -256,3 +258,14 @@ export const createDataRequestSchema = z.object({
   type: dataRequestTypeSchema,
 });
 export type CreateDataRequestDto = z.infer<typeof createDataRequestSchema>;
+
+// =============================================================================
+// Phase 2 Exports
+// =============================================================================
+
+export * from './constants';
+export * from './phase2-enums';
+export * from './company-utils';
+export * from './drive-state-machine';
+export * from './eligibility-engine';
+export * from './phase2-dtos';
