@@ -114,6 +114,7 @@ export enum ExperienceStatus {
 export enum ImportJobType {
   HISTORICAL_DRIVES = 'HISTORICAL_DRIVES',
   APPLICATION_RESULTS = 'APPLICATION_RESULTS',
+  QUESTIONS = 'QUESTIONS',
 }
 
 export enum ImportJobStatus {

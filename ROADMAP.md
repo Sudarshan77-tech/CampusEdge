@@ -54,7 +54,7 @@
 ## Phase 3: Diagnostics & Readiness Engine (MVP Pilot Target)
 
 - [x] Part 3A: Schema, RLS, Pure Domain Logic in `packages/shared`, ADRs, and Readiness Documentation
-- [ ] Part 3B: Content Pipeline & Starter Question Bank (>=300 questions, review gate, CSV import)
+- [x] Part 3B: Content Pipeline & Starter Question Bank (455 questions, review gate, CSV import)
 - [ ] Part 3C: Test Engine, Attempt Lifecycle, Leakage Defense, Synthetic Load Test (CHECKPOINT 3)
 - [ ] Part 3D: Diagnostic Test, Readiness Engine API & Roadmap Generation
 - [ ] Part 3E: Placement Cell & Super Admin Cockpits

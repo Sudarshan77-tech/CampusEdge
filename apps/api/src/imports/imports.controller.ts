@@ -33,19 +33,20 @@ export class ImportsController {
   constructor(private readonly importsService: ImportsService) {}
 
   @Post('upload')
-  @Roles(Role.COLLEGE_ADMIN)
+  @Roles(Role.COLLEGE_ADMIN, Role.SUPER_ADMIN)
   @UseInterceptors(FileInterceptor('file'))
   async upload(
     @ReqUser() user: CurrentUser,
     @UploadedFile() file: Express.Multer.File,
     @Body('type') type?: string,
   ) {
-    if (!user.collegeId) throw new BadRequestException('College context required');
+    const collegeId = user.collegeId || (await this.importsService.getDefaultCollegeId());
+    if (!collegeId) throw new BadRequestException('College context required');
     if (!file) throw new BadRequestException('File is required');
 
     const jobType = (type as ImportJobType) || ImportJobType.HISTORICAL_DRIVES;
     return this.importsService.uploadAndParse(
-      user.collegeId,
+      collegeId,
       user.userId,
       {
         originalname: file.originalname,
@@ -57,49 +58,54 @@ export class ImportsController {
   }
 
   @Get()
-  @Roles(Role.COLLEGE_ADMIN)
+  @Roles(Role.COLLEGE_ADMIN, Role.SUPER_ADMIN)
   async list(@ReqUser() user: CurrentUser, @Query() query: unknown) {
-    if (!user.collegeId) throw new BadRequestException('College context required');
+    const collegeId = user.collegeId || (await this.importsService.getDefaultCollegeId());
+    if (!collegeId) throw new BadRequestException('College context required');
     const parsed = importJobQuerySchema.parse(query);
-    return this.importsService.listJobs(user.collegeId, parsed);
+    return this.importsService.listJobs(collegeId, parsed);
   }
 
   @Get(':id/preview')
-  @Roles(Role.COLLEGE_ADMIN)
+  @Roles(Role.COLLEGE_ADMIN, Role.SUPER_ADMIN)
   async preview(@Param('id') id: string, @ReqUser() user: CurrentUser) {
-    if (!user.collegeId) throw new BadRequestException('College context required');
-    return this.importsService.getPreview(id, user.collegeId);
+    const collegeId = user.collegeId || (await this.importsService.getDefaultCollegeId());
+    if (!collegeId) throw new BadRequestException('College context required');
+    return this.importsService.getPreview(id, collegeId);
   }
 
   @Post(':id/resolve-company')
-  @Roles(Role.COLLEGE_ADMIN)
+  @Roles(Role.COLLEGE_ADMIN, Role.SUPER_ADMIN)
   async resolveCompany(
     @Param('id') id: string,
     @ReqUser() user: CurrentUser,
     @Body() body: unknown,
   ) {
-    if (!user.collegeId) throw new BadRequestException('College context required');
+    const collegeId = user.collegeId || (await this.importsService.getDefaultCollegeId());
+    if (!collegeId) throw new BadRequestException('College context required');
     const parsed = companyMappingItemSchema.parse(body);
-    return this.importsService.resolveCompany(id, user.collegeId, parsed);
+    return this.importsService.resolveCompany(id, collegeId, parsed);
   }
 
   @Post(':id/commit')
-  @Roles(Role.COLLEGE_ADMIN)
+  @Roles(Role.COLLEGE_ADMIN, Role.SUPER_ADMIN)
   async commit(@Param('id') id: string, @ReqUser() user: CurrentUser, @Body() body: unknown) {
-    if (!user.collegeId) throw new BadRequestException('College context required');
+    const collegeId = user.collegeId || (await this.importsService.getDefaultCollegeId());
+    if (!collegeId) throw new BadRequestException('College context required');
     const parsed = commitImportSchema.parse(body);
-    return this.importsService.commit(id, user.collegeId, user.userId, parsed);
+    return this.importsService.commit(id, collegeId, user.userId, parsed);
   }
 
   @Get(':id/errors.csv')
-  @Roles(Role.COLLEGE_ADMIN)
+  @Roles(Role.COLLEGE_ADMIN, Role.SUPER_ADMIN)
   async downloadErrors(
     @Param('id') id: string,
     @ReqUser() user: CurrentUser,
     @Res() res: Response,
   ) {
-    if (!user.collegeId) throw new BadRequestException('College context required');
-    const { fileName, csvContent } = await this.importsService.getErrorsCsv(id, user.collegeId);
+    const collegeId = user.collegeId || (await this.importsService.getDefaultCollegeId());
+    if (!collegeId) throw new BadRequestException('College context required');
+    const { fileName, csvContent } = await this.importsService.getErrorsCsv(id, collegeId);
 
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);

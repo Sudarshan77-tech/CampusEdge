@@ -3,6 +3,7 @@ import {
   ContentScope,
   QuestionReportReason,
   QuestionSource,
+  QuestionStatus,
   QuestionType,
   ResultsReleasePolicy,
   TechnicalTrack,
@@ -77,6 +78,54 @@ export const QuestionReportSchema = z.object({
 });
 
 export type QuestionReportDto = z.infer<typeof QuestionReportSchema>;
+
+export const UpdateQuestionSchema = z.object({
+  topicId: z.string().uuid().optional(),
+  subtopicId: z.string().uuid().optional().nullable(),
+  difficulty: z.number().int().min(1).max(5).optional(),
+  groupId: z.string().uuid().optional().nullable(),
+  stem: z.string().min(5).optional(),
+  explanation: z.string().min(5).optional(),
+  numericAnswer: z.number().optional().nullable(),
+  numericTolerance: z.number().min(0).optional(),
+  expectedTimeSeconds: z.number().int().min(10).max(600).optional(),
+  tags: z.array(z.string()).optional(),
+  options: z.array(QuestionOptionInputSchema).optional(),
+});
+
+export type UpdateQuestionDto = z.infer<typeof UpdateQuestionSchema>;
+
+export const CreateQuestionGroupSchema = z.object({
+  scope: z.nativeEnum(ContentScope).default(ContentScope.COLLEGE),
+  collegeId: z.string().uuid().optional().nullable(),
+  title: z.string().min(3).max(255),
+  body: z.string().min(10),
+  imagePath: z.string().max(500).optional().nullable(),
+});
+
+export type CreateQuestionGroupDto = z.infer<typeof CreateQuestionGroupSchema>;
+
+export const QuestionQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  search: z.string().optional(),
+  topicId: z.string().uuid().optional(),
+  subtopicId: z.string().uuid().optional(),
+  type: z.nativeEnum(QuestionType).optional(),
+  difficulty: z.coerce.number().int().min(1).max(5).optional(),
+  status: z.nativeEnum(QuestionStatus).optional(),
+  scope: z.nativeEnum(ContentScope).optional(),
+  tag: z.string().optional(),
+});
+
+export type QuestionQueryDto = z.infer<typeof QuestionQuerySchema>;
+
+export const ResolveReportSchema = z.object({
+  action: z.enum(['APPROVE', 'RETIRE']),
+  note: z.string().max(500).optional().default(''),
+});
+
+export type ResolveReportDto = z.infer<typeof ResolveReportSchema>;
 
 // -------------------------------------------------------------
 // In-Attempt Sanitized DTOs (Zero Answer Key Leakage Contract)

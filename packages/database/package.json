@@ -27,6 +27,10 @@
     "db:seed:dev-users:remote": "dotenv -e ../../apps/api/.env -- tsx prisma/seed-dev-users.ts",
     "db:seed:demo-intelligence": "dotenv -e ../../apps/api/.env.local -- tsx prisma/seed-demo-intelligence.ts",
     "db:seed:demo-intelligence:remote": "dotenv -e ../../apps/api/.env -- tsx prisma/seed-demo-intelligence.ts",
+    "content:generate": "tsx seed-content/generate.ts",
+    "content:validate": "tsx prisma/validate-content.ts",
+    "content:seed:dev": "dotenv -e ../../apps/api/.env.local -- tsx prisma/seed-starter-questions.ts",
+    "content:seed:remote": "dotenv -e ../../apps/api/.env -- tsx prisma/seed-starter-questions.ts",
     "storage:setup": "dotenv -e ../../apps/api/.env -- tsx prisma/setup-storage.ts"
   },
   "dependencies": {

@@ -19,6 +19,7 @@ import { NoticesModule } from './notices/notices.module';
 import { ExperiencesModule } from './experiences/experiences.module';
 import { IntelligenceModule } from './intelligence/intelligence.module';
 import { ImportsModule } from './imports/imports.module';
+import { QuestionsModule } from './questions/questions.module';
 import { PrismaService } from './prisma.service';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
@@ -51,6 +52,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     ExperiencesModule,
     IntelligenceModule,
     ImportsModule,
+    QuestionsModule,
   ],
   providers: [
     PrismaService,
