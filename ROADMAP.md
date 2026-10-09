@@ -43,13 +43,13 @@
 
 ## Phase 2: Placement Cell Cockpit & Intelligence Data
 
-- [ ] Company directory & recruiter profiles
-- [ ] Placement drive management (eligibility rules, branches, CGPA cutoffs, deadlines)
-- [ ] Student drive registration and application tracking
-- [ ] Bulk CSV student import with format validation
-- [ ] Official campus placement noticeboard and circulars
-- [ ] Senior interview experience submission workflow with TPO approval moderation
-- [ ] Historical package analytics and placement statistics aggregation
+- [x] Company directory & recruiter profiles
+- [x] Placement drive management (eligibility rules, branches, CGPA cutoffs, deadlines)
+- [x] Student drive registration and application tracking
+- [x] Bulk CSV student import with format validation
+- [x] Official campus placement noticeboard and circulars
+- [x] Senior interview experience submission workflow with TPO approval moderation
+- [x] Historical package analytics and placement statistics aggregation
 
 ## Phase 3: Diagnostics & Readiness Engine (MVP Pilot Target)
 
@@ -117,5 +117,8 @@
 ## Decisions Log
 
 - **2026-10-09**: [ADR 0001] Adopted Prisma Migrate as sole schema authority with manual SQL for Row Level Security (RLS).
+- **2026-10-09**: [ADR 0002] Authoritative role and tenant assignment via API only; zero trust for signup metadata.
+- **2026-10-09**: [ADR 0003] Global recruiter catalog with tenant-scoped operational facts via composite primary and foreign keys.
+- **2026-10-09**: [ADR 0004] Differential privacy with small cohort masking (< 3 students) and purpose-bound DPDP consent capture.
 - **2026-10-09**: Mandated deterministic algorithms for all score calculations and test cases; AI restricted strictly to qualitative evaluation and simulation.
 - **2026-10-09**: Selected Google Cloud Run (asia-south1, Mumbai) as deployment target for DPDP Act data residency compliance.
