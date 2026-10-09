@@ -4,9 +4,27 @@ import { PrismaService } from '../prisma.service';
 import { DriveStatus, DriveCategory, DriveType, JobType } from '@campusedge/shared';
 import { ConflictException } from '@nestjs/common';
 
+interface MockPrisma {
+  placementSeason: { findFirst: jest.Mock };
+  company: { findUnique: jest.Mock };
+  drive: {
+    findFirst: jest.Mock;
+    findMany: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    count: jest.Mock;
+  };
+  driveRole: { create: jest.Mock };
+  driveRoleSkill: { createMany: jest.Mock };
+  driveEligibility: { create: jest.Mock };
+  driveRound: { create: jest.Mock };
+  driveRoundTopic: { createMany: jest.Mock };
+  $transaction: jest.Mock;
+}
+
 describe('DrivesService', () => {
   let service: DrivesService;
-  let prisma: any;
+  let prisma: MockPrisma;
 
   beforeEach(async () => {
     prisma = {

@@ -1,11 +1,30 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExperiencesService } from './experiences.service';
 import { PrismaService } from '../prisma.service';
-import { ExperienceStatus, Role, ExperienceOutcome } from '@campusedge/shared';
+import { ExperienceStatus, Role, ExperienceOutcome, UserStatus } from '@campusedge/shared';
+
+interface MockPrisma {
+  experience: {
+    findFirst: jest.Mock;
+    findUnique: jest.Mock;
+    findMany: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    count: jest.Mock;
+  };
+  experienceReport: {
+    create: jest.Mock;
+    count: jest.Mock;
+  };
+  company: {
+    findUnique: jest.Mock;
+  };
+  $transaction: jest.Mock;
+}
 
 describe('ExperiencesService', () => {
   let service: ExperiencesService;
-  let prisma: any;
+  let prisma: MockPrisma;
 
   beforeEach(async () => {
     prisma = {
@@ -57,7 +76,7 @@ describe('ExperiencesService', () => {
     const result = await service.findById('exp-1', {
       userId: 'different-student-id',
       role: Role.STUDENT,
-      status: 'ACTIVE' as any,
+      status: UserStatus.ACTIVE,
       collegeId: 'col-1',
     });
 
@@ -81,7 +100,7 @@ describe('ExperiencesService', () => {
 
     const result = await service.report(
       'exp-1',
-      { userId: 'u3', collegeId: 'col-1', role: Role.STUDENT, status: 'ACTIVE' as any },
+      { userId: 'u3', collegeId: 'col-1', role: Role.STUDENT, status: UserStatus.ACTIVE },
       { reason: 'Contains NDA violating technical questions' },
     );
 

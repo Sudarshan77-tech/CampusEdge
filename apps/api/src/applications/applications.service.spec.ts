@@ -1,12 +1,30 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ApplicationsService } from './applications.service';
 import { PrismaService } from '../prisma.service';
-import { ApplicationStatus, ConsentType, DriveStatus } from '@campusedge/shared';
+import { ApplicationStatus, ConsentType, DriveStatus, Role, UserStatus } from '@campusedge/shared';
 import { ConflictException } from '@nestjs/common';
+
+interface MockPrisma {
+  drive: { findFirst: jest.Mock };
+  studentProfile: { findFirst: jest.Mock; findUnique: jest.Mock };
+  college: { findUnique: jest.Mock };
+  driveApplication: {
+    findFirst: jest.Mock;
+    findUnique: jest.Mock;
+    findMany: jest.Mock;
+    create: jest.Mock;
+    upsert: jest.Mock;
+    update: jest.Mock;
+    updateMany: jest.Mock;
+    count: jest.Mock;
+  };
+  consentRecord: { create: jest.Mock };
+  $transaction: jest.Mock;
+}
 
 describe('ApplicationsService', () => {
   let service: ApplicationsService;
-  let prisma: any;
+  let prisma: MockPrisma;
 
   beforeEach(async () => {
     prisma = {
@@ -77,7 +95,7 @@ describe('ApplicationsService', () => {
     });
 
     const result = await service.apply(
-      { userId: 'u1', collegeId: 'c1', role: 'STUDENT' as any, status: 'ACTIVE' as any },
+      { userId: 'u1', collegeId: 'c1', role: Role.STUDENT, status: UserStatus.ACTIVE },
       'd1',
       { consentGiven: true, policyVersion: '1.0' },
     );
@@ -111,7 +129,7 @@ describe('ApplicationsService', () => {
 
     await expect(
       service.apply(
-        { userId: 'u1', collegeId: 'c1', role: 'STUDENT' as any, status: 'ACTIVE' as any },
+        { userId: 'u1', collegeId: 'c1', role: Role.STUDENT, status: UserStatus.ACTIVE },
         'd1',
         { consentGiven: true, policyVersion: '1.0' },
       ),

@@ -202,6 +202,7 @@ export type UpdateUserStatusDto = z.infer<typeof updateUserStatusSchema>;
 export const updateCollegeSettingsSchema = z.object({
   emailDomains: z.array(z.string().toLowerCase().trim()).optional(),
   requireStudentApproval: z.boolean().optional(),
+  allowMultipleOffers: z.boolean().optional(),
   contactEmail: z.string().email().optional().nullable(),
 });
 export type UpdateCollegeSettingsDto = z.infer<typeof updateCollegeSettingsSchema>;

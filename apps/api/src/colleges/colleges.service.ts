@@ -78,6 +78,9 @@ export class CollegesService {
         ...(dto.requireStudentApproval !== undefined && {
           requireStudentApproval: dto.requireStudentApproval,
         }),
+        ...(dto.allowMultipleOffers !== undefined && {
+          allowMultipleOffers: dto.allowMultipleOffers,
+        }),
         ...(dto.contactEmail !== undefined && { contactEmail: dto.contactEmail }),
       },
     });

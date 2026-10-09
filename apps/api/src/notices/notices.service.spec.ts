@@ -5,9 +5,22 @@ import { ConfigService } from '@nestjs/config';
 import { BadRequestException } from '@nestjs/common';
 import { NoticeStatus } from '@campusedge/shared';
 
+interface MockPrisma {
+  notice: {
+    create: jest.Mock;
+    update: jest.Mock;
+    findFirst: jest.Mock;
+    findMany: jest.Mock;
+    count: jest.Mock;
+  };
+  noticeAttachment: {
+    create: jest.Mock;
+  };
+}
+
 describe('NoticesService', () => {
   let service: NoticesService;
-  let prisma: any;
+  let prisma: MockPrisma;
 
   beforeEach(async () => {
     prisma = {

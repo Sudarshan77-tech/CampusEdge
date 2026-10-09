@@ -1,12 +1,29 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CompaniesService } from './companies.service';
 import { PrismaService } from '../prisma.service';
-import { Role, CompanyStatus } from '@campusedge/shared';
+import { Role, CompanyStatus, UserStatus } from '@campusedge/shared';
 import { ConflictException } from '@nestjs/common';
+
+interface MockPrisma {
+  company: {
+    findMany: jest.Mock;
+    findUnique: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    count: jest.Mock;
+  };
+  drive: {
+    updateMany: jest.Mock;
+  };
+  experience: {
+    updateMany: jest.Mock;
+  };
+  $transaction: jest.Mock;
+}
 
 describe('CompaniesService', () => {
   let service: CompaniesService;
-  let prisma: any;
+  let prisma: MockPrisma;
 
   beforeEach(async () => {
     prisma = {
@@ -43,7 +60,7 @@ describe('CompaniesService', () => {
     prisma.company.findUnique.mockResolvedValue(existing);
 
     const result = await service.create(
-      { userId: 'u1', role: Role.COLLEGE_ADMIN, status: 'ACTIVE' as any, collegeId: 'c1' },
+      { userId: 'u1', role: Role.COLLEGE_ADMIN, status: UserStatus.ACTIVE, collegeId: 'c1' },
       { name: 'Google India' },
     );
 
@@ -63,7 +80,7 @@ describe('CompaniesService', () => {
     });
 
     const result = await service.create(
-      { userId: 'u1', role: Role.COLLEGE_ADMIN, status: 'ACTIVE' as any, collegeId: 'c1' },
+      { userId: 'u1', role: Role.COLLEGE_ADMIN, status: UserStatus.ACTIVE, collegeId: 'c1' },
       { name: 'Acme Corp' },
     );
 
@@ -82,7 +99,7 @@ describe('CompaniesService', () => {
   it('throws error when company name has no alphanumeric characters', async () => {
     await expect(
       service.create(
-        { userId: 'u1', role: Role.COLLEGE_ADMIN, status: 'ACTIVE' as any, collegeId: 'c1' },
+        { userId: 'u1', role: Role.COLLEGE_ADMIN, status: UserStatus.ACTIVE, collegeId: 'c1' },
         { name: '---' },
       ),
     ).rejects.toThrow(ConflictException);

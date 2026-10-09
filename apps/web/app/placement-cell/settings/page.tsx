@@ -23,6 +23,7 @@ interface CollegeDetails {
   code: string;
   emailDomains: string[];
   requireStudentApproval: boolean;
+  allowMultipleOffers?: boolean;
   branches: Array<{ id: string; branchCode: string; branchName: string }>;
 }
 
@@ -36,6 +37,7 @@ export default function PlacementCellSettingsPage() {
   // Form states
   const [emailDomainsStr, setEmailDomainsStr] = React.useState('');
   const [requireApproval, setRequireApproval] = React.useState(false);
+  const [allowMultipleOffers, setAllowMultipleOffers] = React.useState(true);
 
   // Add branch form states
   const [newBranchCode, setNewBranchCode] = React.useState('');
@@ -49,6 +51,7 @@ export default function PlacementCellSettingsPage() {
       setCollege(data);
       setEmailDomainsStr(data.emailDomains.join(', '));
       setRequireApproval(data.requireStudentApproval);
+      setAllowMultipleOffers(data.allowMultipleOffers ?? true);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -75,6 +78,7 @@ export default function PlacementCellSettingsPage() {
       await api.patch('/colleges/my-college', {
         emailDomains: domains,
         requireStudentApproval: requireApproval,
+        allowMultipleOffers,
       });
 
       setSuccess('College settings successfully saved!');
@@ -190,7 +194,7 @@ export default function PlacementCellSettingsPage() {
                     </p>
                   </div>
 
-                  <div className="pt-2">
+                  <div className="pt-2 space-y-4">
                     <label className="flex items-start space-x-3 cursor-pointer">
                       <input
                         type="checkbox"
@@ -205,6 +209,25 @@ export default function PlacementCellSettingsPage() {
                         <p className="text-xs text-muted-foreground">
                           If checked, ALL students will enter PENDING_APPROVAL status until manually
                           verified by an administrator, even if their email domain matches.
+                        </p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={allowMultipleOffers}
+                        onChange={(e) => setAllowMultipleOffers(e.target.checked)}
+                        className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <div className="text-sm">
+                        <span className="font-semibold text-foreground">
+                          Allow Multiple Placement Offers (One-Offer Policy Toggle)
+                        </span>
+                        <p className="text-xs text-muted-foreground">
+                          If unchecked (institutional one-offer policy active), students who have
+                          already accepted an offer cannot register for regular drives unless the
+                          drive is in an upgrade tier (e.g. Dream or Super Dream).
                         </p>
                       </div>
                     </label>

@@ -35,9 +35,12 @@ export async function apiClient<T = unknown>(
   }
 
   const reqHeaders: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(headers as Record<string, string>),
   };
+
+  if (!(rest.body instanceof FormData)) {
+    reqHeaders['Content-Type'] = reqHeaders['Content-Type'] || 'application/json';
+  }
 
   if (authToken) {
     reqHeaders['Authorization'] = `Bearer ${authToken}`;
@@ -102,4 +105,11 @@ export const api = {
 
   delete: <T = unknown>(endpoint: string, options?: RequestOptions) =>
     apiClient<T>(endpoint, { method: 'DELETE', ...options }),
+
+  upload: <T = unknown>(endpoint: string, formData: FormData, options?: RequestOptions) =>
+    apiClient<T>(endpoint, {
+      method: 'POST',
+      body: formData,
+      ...options,
+    }),
 };

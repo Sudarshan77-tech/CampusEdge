@@ -35,24 +35,37 @@ export function Navbar({ user }: NavbarProps) {
     if (user.role === Role.SUPER_ADMIN) {
       return [
         { href: '/admin/colleges', label: 'Colleges' },
+        { href: '/admin/companies', label: 'Companies' },
+        { href: '/admin/topics', label: 'Topics' },
+        { href: '/admin/experiences', label: 'Takedowns' },
         { href: '/admin/users', label: 'Users' },
-        { href: '/admin/audit', label: 'Platform Audit' },
+        { href: '/admin/audit', label: 'Audit' },
       ];
     }
 
     if (user.role === Role.COLLEGE_ADMIN) {
       return [
         { href: '/placement-cell/dashboard', label: 'Dashboard' },
+        { href: '/placement-cell/drives', label: 'Drives' },
+        { href: '/placement-cell/companies', label: 'Companies' },
+        { href: '/placement-cell/seasons', label: 'Seasons' },
+        { href: '/placement-cell/import', label: 'Import' },
+        { href: '/placement-cell/notices', label: 'Notices' },
+        { href: '/placement-cell/experiences', label: 'Moderation' },
+        { href: '/placement-cell/intelligence', label: 'Intelligence' },
         { href: '/placement-cell/students', label: 'Students' },
-        { href: '/placement-cell/settings', label: 'College Settings' },
-        { href: '/placement-cell/audit', label: 'Audit Trail' },
+        { href: '/placement-cell/settings', label: 'Settings' },
       ];
     }
 
     if (user.role === Role.STUDENT) {
       return [
         { href: '/student/dashboard', label: 'Dashboard' },
-        { href: '/student/profile', label: 'My Profile' },
+        { href: '/student/drives', label: 'Drives' },
+        { href: '/student/companies', label: 'Intelligence' },
+        { href: '/student/notices', label: 'Notices' },
+        { href: '/student/experiences', label: 'Experiences' },
+        { href: '/student/profile', label: 'Profile' },
       ];
     }
 

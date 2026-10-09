@@ -3,9 +3,37 @@ import { ImportsService } from './imports.service';
 import { PrismaService } from '../prisma.service';
 import { ImportJobType } from '@campusedge/shared';
 
+interface MockPrisma {
+  company: {
+    findMany: jest.Mock;
+    findUnique: jest.Mock;
+    create: jest.Mock;
+  };
+  placementSeason: {
+    findFirst: jest.Mock;
+    create: jest.Mock;
+  };
+  drive: {
+    create: jest.Mock;
+  };
+  driveRole: {
+    create: jest.Mock;
+  };
+  importJob: {
+    findFirst: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+  };
+  importRowError: {
+    createMany: jest.Mock;
+    findMany: jest.Mock;
+  };
+  $transaction: jest.Mock;
+}
+
 describe('ImportsService', () => {
   let service: ImportsService;
-  let prisma: any;
+  let prisma: MockPrisma;
 
   beforeEach(async () => {
     prisma = {
@@ -48,7 +76,7 @@ describe('ImportsService', () => {
       'company_name,season_label,title,role_title,ctc_min_lpa,ctc_max_lpa\n' +
       '=CMD|"" /C calc"!A0,2024-25,+Malicious Title,@Engineer,10,12';
 
-    prisma.importJob.create.mockImplementation(({ data }: any) => ({
+    prisma.importJob.create.mockImplementation(({ data }: { data: Record<string, unknown> }) => ({
       id: 'job-1',
       ...data,
     }));
@@ -75,7 +103,7 @@ describe('ImportsService', () => {
       'company_name,season_label,title,role_title,ctc_min_lpa,ctc_max_lpa\n' +
       'Google,2024-25,Campus Drive,SWE,15,10'; // min > max
 
-    prisma.importJob.create.mockImplementation(({ data }: any) => ({
+    prisma.importJob.create.mockImplementation(({ data }: { data: Record<string, unknown> }) => ({
       id: 'job-1',
       ...data,
     }));

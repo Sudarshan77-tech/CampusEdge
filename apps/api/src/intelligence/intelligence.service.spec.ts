@@ -3,9 +3,24 @@ import { IntelligenceService } from './intelligence.service';
 import { PrismaService } from '../prisma.service';
 import { HISTORICAL_INTELLIGENCE_DISCLAIMER } from '@campusedge/shared';
 
+interface MockPrisma {
+  placementSeason: {
+    findMany: jest.Mock;
+  };
+  drive: {
+    findMany: jest.Mock;
+  };
+  company: {
+    findUnique: jest.Mock;
+  };
+  experience: {
+    findMany: jest.Mock;
+  };
+}
+
 describe('IntelligenceService', () => {
   let service: IntelligenceService;
-  let prisma: any;
+  let prisma: MockPrisma;
 
   beforeEach(async () => {
     prisma = {

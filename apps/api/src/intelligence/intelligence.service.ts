@@ -330,14 +330,12 @@ export class IntelligenceService {
         category: d.category,
         visitDate: d.visitDate,
         rolesCount: d.roles.length,
-        roles: d.roles.map(
-          (r: { title: string; jobType: any; ctcLpaMin: any; ctcLpaMax: any }) => ({
-            title: r.title,
-            jobType: r.jobType,
-            ctcMin: Number(r.ctcLpaMin),
-            ctcMax: Number(r.ctcLpaMax),
-          }),
-        ),
+        roles: d.roles.map((r) => ({
+          title: r.title,
+          jobType: r.jobType,
+          ctcMin: Number(r.ctcLpaMin),
+          ctcMax: Number(r.ctcLpaMax),
+        })),
         registeredCount: d.registeredCount,
         selectedCount: d.selectedCount,
       })),

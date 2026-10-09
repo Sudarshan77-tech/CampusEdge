@@ -42,6 +42,16 @@ interface ParsedRowResult {
   errors: { column: string; message: string }[];
 }
 
+interface ImportJobOptions {
+  parsedValidRows?: (HistoricalDriveRow & {
+    rowNumber: number;
+    matchedCompanyId?: string;
+  })[];
+  unmappedCompanies?: string[];
+  companyMappings?: Record<string, { resolvedCompanyId: string | null; createNew: boolean }>;
+  [key: string]: unknown;
+}
+
 @Injectable()
 export class ImportsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -82,7 +92,7 @@ export class ImportsService {
       const stream = Readable.from(buffer);
       await workbook.csv.read(stream);
     } else {
-      await workbook.xlsx.load(buffer as any);
+      await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
     }
 
     const worksheet = workbook.worksheets[0];
@@ -318,10 +328,14 @@ export class ImportsService {
     });
     if (!job) throw new NotFoundException('Import job not found');
 
-    const options = (job.options as any) || {};
-    const validRows = (options.parsedValidRows as any[]) || [];
-    const unmappedCompanies = (options.unmappedCompanies as string[]) || [];
-    const mappings = (options.companyMappings as Record<string, any>) || {};
+    const options = (job.options as unknown as ImportJobOptions) || {};
+    const validRows = options.parsedValidRows || [];
+    const unmappedCompanies = options.unmappedCompanies || [];
+    const mappings =
+      (options.companyMappings as Record<
+        string,
+        { resolvedCompanyId: string | null; createNew: boolean }
+      >) || {};
 
     return {
       id: job.id,
@@ -345,7 +359,7 @@ export class ImportsService {
     });
     if (!job) throw new NotFoundException('Import job not found');
 
-    const options = (job.options as any) || {};
+    const options = (job.options as unknown as ImportJobOptions) || {};
     const mappings = options.companyMappings || {};
     mappings[mapping.rawName] = {
       resolvedCompanyId: mapping.resolvedCompanyId || null,
@@ -374,12 +388,8 @@ export class ImportsService {
       throw new BadRequestException('Import job has already been committed');
     }
 
-    const options = (job.options as any) || {};
-    const parsedRows =
-      (options.parsedValidRows as (HistoricalDriveRow & {
-        rowNumber: number;
-        matchedCompanyId?: string;
-      })[]) || [];
+    const options = (job.options as unknown as ImportJobOptions) || {};
+    const parsedRows = options.parsedValidRows || [];
 
     if (parsedRows.length === 0) {
       throw new BadRequestException('No valid rows found to commit');
