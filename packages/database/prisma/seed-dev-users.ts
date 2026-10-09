@@ -1,5 +1,8 @@
 import { PrismaClient, Role, UserStatus, Degree } from '@prisma/client';
 import { createClient } from '@supabase/supabase-js';
+import { validateSeedTarget } from './seed-dev-users.validator';
+
+export { validateSeedTarget };
 
 const prisma = new PrismaClient();
 
@@ -11,32 +14,36 @@ async function seedDevUsers() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
   const secretKey = process.env.SUPABASE_SECRET_KEY || '';
   const demoPassword = process.env.SEED_DEMO_PASSWORD;
-  const allowedRefs = (process.env.ALLOWED_REMOTE_PROJECT_REFS || '')
-    .split(',')
-    .map((r) => r.trim())
-    .filter(Boolean);
 
   if (!supabaseUrl || !secretKey) {
-    console.error(
-      'Error: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY must be set in environment.',
+    throw new Error(
+      'Error: NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL) and SUPABASE_SECRET_KEY must be set in environment.',
     );
-    process.exit(1);
   }
 
   if (!demoPassword) {
-    console.error('Error: SEED_DEMO_PASSWORD must be configured in environment.');
-    process.exit(1);
+    throw new Error('Error: SEED_DEMO_PASSWORD must be configured in environment.');
   }
 
-  const projectRefMatch = supabaseUrl.match(/https:\/\/([a-z0-9]+)\.supabase\.co/);
-  const currentRef = projectRefMatch ? projectRefMatch[1] : '';
+  const validation = validateSeedTarget({
+    supabaseUrl,
+    nodeEnv: process.env.NODE_ENV,
+    allowLocalDemoSeed: process.env.ALLOW_LOCAL_DEMO_SEED,
+    allowedRemoteProjectRefs: process.env.ALLOWED_REMOTE_PROJECT_REFS,
+  });
 
-  console.info(`[Safety Check] Target Project Ref: "${currentRef}"`);
-  if (!currentRef || !allowedRefs.includes(currentRef)) {
-    console.error(
-      `[Safety Refusal] Project ref "${currentRef}" is NOT in ALLOWED_REMOTE_PROJECT_REFS allowlist. Aborting.`,
+  if (!validation.valid) {
+    throw new Error(`[Safety Refusal] ${validation.errorMessage}`);
+  }
+
+  if (validation.isLocal) {
+    console.info(
+      '[Safety Check] Local development environment verified (http://127.0.0.1:54321). Proceeding with local demo seed.',
     );
-    process.exit(1);
+  } else {
+    console.info(
+      `[Safety Check] Target Project Ref: "${validation.projectRef}" (Allowlisted remote target). Proceeding with remote demo seed.`,
+    );
   }
 
   const supabase = createClient(supabaseUrl, secretKey, {
@@ -74,8 +81,7 @@ async function seedDevUsers() {
   });
 
   if (listError) {
-    console.error('Failed to query Supabase Auth users:', listError);
-    process.exit(1);
+    throw new Error(`Failed to query Supabase Auth users: ${listError.message}`);
   }
 
   const existingAuthUsers = usersData?.users || [];
@@ -96,7 +102,7 @@ async function seedDevUsers() {
         app_metadata: { role: acc.role, college_id: acc.collegeId },
       });
       if (updateError) {
-        console.error(`Failed to update auth user ${acc.email}:`, updateError);
+        console.error(`Failed to update auth user ${acc.email}:`, updateError.message);
         continue;
       }
       console.info(`[Auth User Updated] ${acc.email} (${authUserId})`);
@@ -110,7 +116,7 @@ async function seedDevUsers() {
       });
 
       if (createError || !created.user) {
-        console.error(`Failed to create auth user ${acc.email}:`, createError);
+        console.error(`Failed to create auth user ${acc.email}:`, createError?.message);
         continue;
       }
       authUserId = created.user.id;
@@ -181,8 +187,8 @@ async function seedDevUsers() {
 
 seedDevUsers()
   .catch((e) => {
-    console.error('Fatal error during seedDevUsers:', e);
-    process.exit(1);
+    console.error('Fatal error during seedDevUsers:', e.message || e);
+    process.exitCode = 1;
   })
   .finally(async () => {
     await prisma.$disconnect();

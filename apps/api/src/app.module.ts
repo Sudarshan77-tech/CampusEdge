@@ -26,6 +26,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: ['.env.local', '.env'],
       validate: validateEnv,
     }),
     ThrottlerModule.forRoot([
