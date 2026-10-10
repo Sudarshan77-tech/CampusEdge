@@ -15,7 +15,14 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { api, ApiError } from '@/lib/api';
-import { Degree, ConsentType, POLICY_VERSIONS, Proficiency, UserStatus } from '@campusedge/shared';
+import {
+  Degree,
+  ConsentType,
+  POLICY_VERSIONS,
+  Proficiency,
+  UserStatus,
+  Role,
+} from '@campusedge/shared';
 import {
   CheckCircle2,
   Clock,
@@ -24,127 +31,182 @@ import {
   BookOpen,
   ShieldCheck,
   Check,
+  RotateCcw,
+  ShieldAlert,
+  Search,
 } from 'lucide-react';
 
-interface CollegeOption {
-  id: string;
-  name: string;
-  code: string;
-  branches: Array<{ id: string; branchCode: string; branchName: string }>;
-}
-
-interface SkillCatalogItem {
-  id?: string;
-  name: string;
-  category: string;
-}
+import {
+  OnboardingStepNumber,
+  CollegeOption,
+  SkillCatalogItem,
+  MeProfileResponse,
+  SpecialAccountState,
+  resolveOnboardingStep,
+} from './onboarding-helpers';
 
 export default function StudentOnboardingPage() {
   const router = useRouter();
-  const [step, setStep] = React.useState<number>(1);
-  const [loading, setLoading] = React.useState<boolean>(false);
-  const [error, setError] = React.useState<string | null>(null);
+
+  // Wizard state
+  const [step, setStep] = React.useState<OnboardingStepNumber>(1);
+  const [initialLoading, setInitialLoading] = React.useState<boolean>(true);
+  const [actionLoading, setActionLoading] = React.useState<boolean>(false);
+  const [initialError, setInitialError] = React.useState<string | null>(null);
+  const [formError, setFormError] = React.useState<string | null>(null);
+  const [specialState, setSpecialState] = React.useState<SpecialAccountState>(null);
 
   // Step 1: College Selection
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [colleges, setColleges] = React.useState<CollegeOption[]>([]);
+  const [allColleges, setAllColleges] = React.useState<CollegeOption[]>([]);
+  const [filteredColleges, setFilteredColleges] = React.useState<CollegeOption[]>([]);
   const [selectedCollege, setSelectedCollege] = React.useState<CollegeOption | null>(null);
 
-  // Step 2: Consents
+  // Step 2: Statutory Consents
   const [consentTerms, setConsentTerms] = React.useState(false);
   const [consentPrivacy, setConsentPrivacy] = React.useState(false);
   const [consentPlacement, setConsentPlacement] = React.useState(false);
 
   // Step 3: Academic Profile
   const [degree, setDegree] = React.useState<Degree>(Degree.BTECH);
-  const [branchCode, setBranchCode] = React.useState('');
+  const [branchId, setBranchId] = React.useState('');
   const [batchYear, setBatchYear] = React.useState<number>(new Date().getFullYear() + 1);
   const [cgpa, setCgpa] = React.useState<string>('8.50');
   const [backlogs, setBacklogs] = React.useState<number>(0);
   const [skillsCatalog, setSkillsCatalog] = React.useState<SkillCatalogItem[]>([]);
-  const [selectedSkills, setSelectedSkills] = React.useState<string[]>(['TypeScript', 'React']);
+  const [selectedSkills, setSelectedSkills] = React.useState<string[]>([]);
 
-  // Step 4: Final status
+  // Step 4: Verification Status
   const [finalStatus, setFinalStatus] = React.useState<UserStatus | null>(null);
 
-  // Load initial status
-  React.useEffect(() => {
-    async function loadInitial() {
-      try {
-        setLoading(true);
-        const me = await api.get<{
-          id: string;
-          email: string;
-          status: UserStatus;
-          collegeId?: string | null;
-          onboardingStep?: number;
-          college?: CollegeOption | null;
-        }>('/auth/me');
-
-        if (me.college) {
-          setSelectedCollege(me.college);
-        }
-
-        if (me.onboardingStep) {
-          setStep(me.onboardingStep);
-        }
-
-        // Preload colleges and skills
-        const [publicColleges, skills] = await Promise.all([
-          api.get<CollegeOption[]>('/colleges/public'),
-          api.get<SkillCatalogItem[]>('/students/skills-catalog'),
-        ]);
-
-        setColleges(publicColleges);
-        setSkillsCatalog(skills);
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadInitial();
-  }, []);
-
-  // Update colleges on search query
-  const handleSearchColleges = async (q: string) => {
-    setSearchQuery(q);
+  // Primary data loader
+  const loadInitial = React.useCallback(async () => {
     try {
-      const results = await api.get<CollegeOption[]>(`/colleges/public?q=${encodeURIComponent(q)}`);
-      setColleges(results);
-    } catch {
-      // Ignore search error
+      setInitialLoading(true);
+      setInitialError(null);
+      setFormError(null);
+      setSpecialState(null);
+
+      // 1. Fetch current profile from authoritative /me endpoint
+      const meRes = await api.get<{ data?: MeProfileResponse } & MeProfileResponse>('/me');
+      const me: MeProfileResponse = meRes.data && meRes.data.id ? meRes.data : meRes;
+
+      // Handle non-student roles
+      if (me.role === Role.SUPER_ADMIN) {
+        router.push('/admin/colleges');
+        return;
+      }
+      if (me.role === Role.COLLEGE_ADMIN) {
+        router.push('/placement-cell/dashboard');
+        return;
+      }
+
+      // 2. Resolve target step or special state
+      const resolved = resolveOnboardingStep(me.onboardingStep, me.status, me.collegeId);
+
+      if (resolved.redirect) {
+        router.push(resolved.redirect);
+        return;
+      }
+
+      if (resolved.specialState) {
+        setSpecialState(resolved.specialState);
+        setInitialLoading(false);
+        return;
+      }
+
+      if (resolved.stepNumber) {
+        setStep(resolved.stepNumber);
+      }
+
+      // 3. Preload public colleges and available skill catalog
+      const [publicColleges, skills] = await Promise.all([
+        api.get<CollegeOption[]>('/colleges/public'),
+        api.get<SkillCatalogItem[]>('/students/skills-catalog').catch(() => []),
+      ]);
+
+      const safeColleges = Array.isArray(publicColleges) ? publicColleges : [];
+      setAllColleges(safeColleges);
+      setFilteredColleges(safeColleges);
+
+      const safeSkills = Array.isArray(skills) ? skills : [];
+      setSkillsCatalog(safeSkills);
+      if (safeSkills.length > 0) {
+        setSelectedSkills(safeSkills.slice(0, 2).map((s) => s.name));
+      }
+
+      const activeCollege =
+        me.college || (me.collegeId && safeColleges.find((c) => c.id === me.collegeId)) || null;
+
+      if (activeCollege) {
+        setSelectedCollege(activeCollege);
+        const firstBranch = activeCollege.branches?.[0];
+        if (firstBranch) {
+          setBranchId(firstBranch.id);
+        }
+      }
+    } catch (err) {
+      setInitialError((err as Error).message || 'Failed to load account onboarding details.');
+    } finally {
+      setInitialLoading(false);
+    }
+  }, [router]);
+
+  React.useEffect(() => {
+    loadInitial();
+  }, [loadInitial]);
+
+  // College search handler
+  const handleSearchColleges = (q: string) => {
+    setSearchQuery(q);
+    const trimmed = q.trim().toLowerCase();
+    if (!trimmed) {
+      setFilteredColleges(allColleges);
+      return;
+    }
+    const filtered = allColleges.filter(
+      (c) =>
+        c.name.toLowerCase().includes(trimmed) ||
+        (c.code && c.code.toLowerCase().includes(trimmed)),
+    );
+    setFilteredColleges(filtered);
+  };
+
+  const handleSelectCollege = (col: CollegeOption) => {
+    setSelectedCollege(col);
+    const firstBranch = col.branches?.[0];
+    if (firstBranch) {
+      setBranchId(firstBranch.id);
     }
   };
 
-  // Step 1 Submission
+  // Step 1: Select College Submit
   const handleSelectCollegeSubmit = async () => {
     if (!selectedCollege) {
-      setError('Please select your affiliated college.');
+      setFormError('Please select your affiliated college.');
       return;
     }
-    setError(null);
-    setLoading(true);
+    setFormError(null);
+    setActionLoading(true);
 
     try {
       await api.post('/onboarding/college', { collegeId: selectedCollege.id });
       setStep(2);
     } catch (err) {
-      setError((err as ApiError).message);
+      setFormError((err as ApiError).message || 'Failed to save college selection.');
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
-  // Step 2 Submission (DPDP Consents)
+  // Step 2: DPDP Consents Submit
   const handleConsentsSubmit = async () => {
     if (!consentTerms || !consentPrivacy || !consentPlacement) {
-      setError('You must accept all required DPDP statutory terms to continue.');
+      setFormError('You must accept all required statutory DPDP consents to continue.');
       return;
     }
-    setError(null);
-    setLoading(true);
+    setFormError(null);
+    setActionLoading(true);
 
     try {
       await Promise.all([
@@ -163,101 +225,309 @@ export default function StudentOnboardingPage() {
       ]);
       setStep(3);
     } catch (err) {
-      setError((err as ApiError).message);
+      setFormError((err as ApiError).message || 'Failed to record statutory consents.');
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
-  // Step 3 Submission (Academic Profile)
+  // Step 3: Academic Profile Submit
   const handleProfileSubmit = async () => {
     const parsedCgpa = parseFloat(cgpa);
     if (isNaN(parsedCgpa) || parsedCgpa < 0 || parsedCgpa > 10) {
-      setError('Please enter a valid CGPA between 0.00 and 10.00.');
+      setFormError('Please enter a valid CGPA between 0.00 and 10.00.');
       return;
     }
 
-    if (!branchCode) {
-      setError('Please choose your academic branch/department.');
+    if (!branchId) {
+      setFormError('Please choose your academic branch/department.');
       return;
     }
 
-    setError(null);
-    setLoading(true);
+    setFormError(null);
+    setActionLoading(true);
 
     try {
-      const skillsDto = selectedSkills.map((s) => ({
-        skillName: s,
-        category: 'TECHNICAL',
-        proficiency: Proficiency.INTERMEDIATE,
-      }));
+      const skillsDto = selectedSkills
+        .map((sName) => {
+          const item = skillsCatalog.find((c) => c.name === sName);
+          return item?.id ? { skillId: item.id, proficiency: Proficiency.INTERMEDIATE } : null;
+        })
+        .filter(Boolean);
 
-      const res = await api.post<{ status: UserStatus }>('/onboarding/profile', {
+      const res = await api.post<{
+        profile: unknown;
+        userStatus?: UserStatus;
+        status?: UserStatus;
+      }>('/onboarding/profile', {
+        branchId,
         degree,
-        branchCode,
         batchYear: Number(batchYear),
         cgpa: parsedCgpa,
         activeBacklogs: Number(backlogs),
         skills: skillsDto,
       });
 
-      setFinalStatus(res.status);
+      const nextStatus = res.userStatus || res.status || UserStatus.ACTIVE;
+      setFinalStatus(nextStatus);
       setStep(4);
     } catch (err) {
-      setError((err as ApiError).message);
+      setFormError((err as ApiError).message || 'Failed to save academic profile.');
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
-  const toggleSkill = (skill: string) => {
+  const toggleSkill = (skillName: string) => {
     setSelectedSkills((prev) =>
-      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill],
+      prev.includes(skillName) ? prev.filter((s) => s !== skillName) : [...prev, skillName],
     );
   };
+
+  // -------------------------------------------------------------
+  // RENDER: Loading Skeleton State
+  // -------------------------------------------------------------
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 py-12 px-4 dark:bg-slate-900 sm:px-6 lg:px-8">
+        <div className="max-w-2xl mx-auto space-y-8 animate-pulse">
+          {/* Stepper Skeleton */}
+          <div className="flex justify-between items-center relative">
+            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-slate-200 dark:bg-slate-800 -z-0" />
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="flex flex-col items-center bg-slate-50 dark:bg-slate-900 px-2 z-10"
+              >
+                <div className="h-9 w-9 rounded-full bg-slate-200 dark:bg-slate-700" />
+                <div className="h-3 w-14 bg-slate-200 dark:bg-slate-700 rounded mt-2" />
+              </div>
+            ))}
+          </div>
+
+          {/* Card Content Skeleton */}
+          <Card className="shadow-md">
+            <CardHeader className="space-y-3">
+              <div className="h-6 w-48 bg-slate-200 dark:bg-slate-700 rounded" />
+              <div className="h-4 w-72 bg-slate-200 dark:bg-slate-700 rounded" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="h-10 w-full bg-slate-200 dark:bg-slate-700 rounded" />
+              <div className="space-y-2 pt-2">
+                <div className="h-12 w-full bg-slate-200 dark:bg-slate-700 rounded-lg" />
+                <div className="h-12 w-full bg-slate-200 dark:bg-slate-700 rounded-lg" />
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-end pt-4">
+              <div className="h-10 w-32 bg-slate-200 dark:bg-slate-700 rounded" />
+            </CardFooter>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // RENDER: Initial Load Error State
+  // -------------------------------------------------------------
+  if (initialError) {
+    return (
+      <div className="min-h-screen bg-slate-50 py-12 px-4 dark:bg-slate-900 sm:px-6 lg:px-8">
+        <div className="max-w-md mx-auto pt-10">
+          <Card className="shadow-lg border-destructive/20" data-testid="onboarding-fetch-error">
+            <CardHeader className="text-center space-y-2">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                <AlertCircle className="h-6 w-6" />
+              </div>
+              <CardTitle className="text-xl font-bold">Unable to Load Onboarding</CardTitle>
+              <CardDescription>
+                We could not retrieve your account or college onboarding data.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                {initialError}
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col sm:flex-row gap-2 justify-center">
+              <Button onClick={() => loadInitial()} className="w-full sm:w-auto">
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Retry
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push('/login')}
+                className="w-full sm:w-auto"
+              >
+                Return to Sign In
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // RENDER: Special Lifecycle States (Suspended, Deactivated, Unknown)
+  // -------------------------------------------------------------
+  if (specialState === 'SUSPENDED') {
+    return (
+      <div className="min-h-screen bg-slate-50 py-12 px-4 dark:bg-slate-900 sm:px-6 lg:px-8">
+        <div className="max-w-md mx-auto pt-10">
+          <Card className="shadow-lg border-amber-300">
+            <CardHeader className="text-center space-y-2">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-300">
+                <ShieldAlert className="h-6 w-6" />
+              </div>
+              <CardTitle className="text-xl font-bold">Account Suspended</CardTitle>
+              <CardDescription>
+                Your student account has been suspended by administration.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground text-center">
+                Please contact your campus placement cell or CampusEdge platform support for further
+                assistance.
+              </p>
+            </CardContent>
+            <CardFooter className="flex justify-center">
+              <Button variant="outline" onClick={() => router.push('/login')}>
+                Return to Sign In
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (specialState === 'DEACTIVATED') {
+    return (
+      <div className="min-h-screen bg-slate-50 py-12 px-4 dark:bg-slate-900 sm:px-6 lg:px-8">
+        <div className="max-w-md mx-auto pt-10">
+          <Card className="shadow-lg border-muted">
+            <CardHeader className="text-center space-y-2">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <AlertCircle className="h-6 w-6" />
+              </div>
+              <CardTitle className="text-xl font-bold">Account Deactivated</CardTitle>
+              <CardDescription>
+                This account is currently deactivated and cannot access onboarding.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground text-center">
+                If you believe this is in error, reach out to your college placement administrator.
+              </p>
+            </CardContent>
+            <CardFooter className="flex justify-center">
+              <Button variant="outline" onClick={() => router.push('/login')}>
+                Return to Sign In
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (specialState === 'UNKNOWN') {
+    return (
+      <div className="min-h-screen bg-slate-50 py-12 px-4 dark:bg-slate-900 sm:px-6 lg:px-8">
+        <div className="max-w-md mx-auto pt-10">
+          <Card className="shadow-lg border-destructive/20">
+            <CardHeader className="text-center space-y-2">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                <AlertCircle className="h-6 w-6" />
+              </div>
+              <CardTitle className="text-xl font-bold">Unexpected Onboarding State</CardTitle>
+              <CardDescription>
+                We could not determine your onboarding progression step.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground text-center">
+                Please refresh the page to try again, or sign out and sign back in.
+              </p>
+            </CardContent>
+            <CardFooter className="flex flex-col sm:flex-row gap-2 justify-center">
+              <Button onClick={() => loadInitial()} className="w-full sm:w-auto">
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Retry
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push('/login')}
+                className="w-full sm:w-auto"
+              >
+                Return to Sign In
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // RENDER: Active Onboarding Stepper & Wizard Steps (1 - 4)
+  // -------------------------------------------------------------
+  const stepsMeta = [
+    { num: 1, title: 'College' },
+    { num: 2, title: 'Consents' },
+    { num: 3, title: 'Academic Profile' },
+    { num: 4, title: 'Status' },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 dark:bg-slate-900 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto space-y-8">
-        {/* Stepper Progress */}
+        {/* Stepper Progress Bar */}
         <div className="flex justify-between items-center relative">
           <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-slate-200 dark:bg-slate-800 -z-0" />
-          {[
-            { num: 1, title: 'College' },
-            { num: 2, title: 'Consents' },
-            { num: 3, title: 'Academic Profile' },
-            { num: 4, title: 'Status' },
-          ].map((s) => (
-            <div
-              key={s.num}
-              className="flex flex-col items-center bg-slate-50 dark:bg-slate-900 px-2 z-10"
-            >
+          {stepsMeta.map((s) => {
+            const isCompleted = step > s.num;
+            const isCurrent = step === s.num;
+            return (
               <div
-                className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
-                  step === s.num
-                    ? 'bg-primary text-primary-foreground ring-4 ring-primary/20'
-                    : step > s.num
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-muted text-muted-foreground'
-                }`}
+                key={s.num}
+                className="flex flex-col items-center bg-slate-50 dark:bg-slate-900 px-2 z-10"
               >
-                {step > s.num ? <Check className="h-4 w-4" /> : s.num}
+                <div
+                  className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                    isCurrent
+                      ? 'bg-primary text-primary-foreground ring-4 ring-primary/20'
+                      : isCompleted
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-muted text-muted-foreground'
+                  }`}
+                  data-testid={`step-indicator-${s.num}`}
+                >
+                  {isCompleted ? <Check className="h-4 w-4" /> : s.num}
+                </div>
+                <span className="text-xs font-medium mt-1 text-muted-foreground">{s.title}</span>
               </div>
-              <span className="text-xs font-medium mt-1 text-muted-foreground">{s.title}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        {error && (
-          <div className="rounded-md bg-destructive/15 p-4 text-sm text-destructive flex items-center space-x-2">
+        {/* Action / Form Error Alert */}
+        {formError && (
+          <div
+            className="rounded-md bg-destructive/15 p-4 text-sm text-destructive flex items-center space-x-2"
+            role="alert"
+          >
             <AlertCircle className="h-5 w-5 flex-shrink-0" />
-            <span>{error}</span>
+            <span>{formError}</span>
           </div>
         )}
 
+        {/* ======================================================== */}
         {/* STEP 1: CHOOSE COLLEGE */}
+        {/* ======================================================== */}
         {step === 1 && (
-          <Card className="shadow-md">
+          <Card className="shadow-md" data-testid="onboarding-step-1">
             <CardHeader>
               <CardTitle className="text-xl flex items-center space-x-2">
                 <Building className="h-5 w-5 text-primary" />
@@ -270,35 +540,49 @@ export default function StudentOnboardingPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="search-colleges">Search Colleges</Label>
-                <Input
-                  id="search-colleges"
-                  placeholder="Type college name or code (e.g. Apex Institute)..."
-                  value={searchQuery}
-                  onChange={(e) => handleSearchColleges(e.target.value)}
-                />
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="search-colleges"
+                    className="pl-9"
+                    placeholder="Type college name or code (e.g. Apex Institute)..."
+                    value={searchQuery}
+                    onChange={(e) => handleSearchColleges(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                {colleges.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4 text-center">
-                    No approved colleges found matching your search.
-                  </p>
+                {allColleges.length === 0 ? (
+                  <div className="py-8 text-center text-muted-foreground text-sm space-y-2">
+                    <p>
+                      No colleges are open for registration yet. Ask your placement cell to contact
+                      CampusEdge.
+                    </p>
+                  </div>
+                ) : filteredColleges.length === 0 ? (
+                  <div className="py-8 text-center text-muted-foreground text-sm space-y-2">
+                    <p>No approved colleges found matching &quot;{searchQuery}&quot;.</p>
+                  </div>
                 ) : (
-                  colleges.map((col) => {
+                  filteredColleges.map((col) => {
                     const isSelected = selectedCollege?.id === col.id;
                     return (
                       <div
                         key={col.id}
-                        onClick={() => setSelectedCollege(col)}
+                        onClick={() => handleSelectCollege(col)}
                         className={`cursor-pointer rounded-lg border p-3.5 transition-colors flex items-center justify-between ${
                           isSelected
                             ? 'border-primary bg-primary/5 text-primary'
                             : 'hover:bg-muted/50 border-input'
                         }`}
+                        data-testid={`college-option-${col.id}`}
                       >
                         <div>
                           <p className="font-semibold text-sm text-foreground">{col.name}</p>
-                          <p className="text-xs text-muted-foreground">Code: {col.code}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Code: {col.code || col.slug}
+                          </p>
                         </div>
                         {isSelected && <Badge variant="default">Selected</Badge>}
                       </div>
@@ -308,16 +592,22 @@ export default function StudentOnboardingPage() {
               </div>
             </CardContent>
             <CardFooter className="flex justify-end">
-              <Button onClick={handleSelectCollegeSubmit} disabled={loading || !selectedCollege}>
-                {loading ? 'Saving...' : 'Continue to Consents'}
+              <Button
+                onClick={handleSelectCollegeSubmit}
+                disabled={actionLoading || !selectedCollege}
+                data-testid="continue-to-consents-btn"
+              >
+                {actionLoading ? 'Saving...' : 'Continue to Consents'}
               </Button>
             </CardFooter>
           </Card>
         )}
 
-        {/* STEP 2: CONSENTS */}
+        {/* ======================================================== */}
+        {/* STEP 2: STATUTORY DPDP CONSENTS */}
+        {/* ======================================================== */}
         {step === 2 && (
-          <Card className="shadow-md">
+          <Card className="shadow-md" data-testid="onboarding-step-2">
             <CardHeader>
               <CardTitle className="text-xl flex items-center space-x-2">
                 <ShieldCheck className="h-5 w-5 text-primary" />
@@ -336,6 +626,7 @@ export default function StudentOnboardingPage() {
                     className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                     checked={consentTerms}
                     onChange={(e) => setConsentTerms(e.target.checked)}
+                    data-testid="consent-terms-cb"
                   />
                   <div className="text-sm">
                     <span className="font-medium text-foreground">Terms of Service Acceptance</span>
@@ -352,10 +643,11 @@ export default function StudentOnboardingPage() {
                     className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                     checked={consentPrivacy}
                     onChange={(e) => setConsentPrivacy(e.target.checked)}
+                    data-testid="consent-privacy-cb"
                   />
                   <div className="text-sm">
                     <span className="font-medium text-foreground">
-                      Privacy Policy & Data Processing
+                      Privacy Policy &amp; Data Processing
                     </span>
                     <p className="text-xs text-muted-foreground">
                       I consent to the collection and retention of my academic records for campus
@@ -370,10 +662,11 @@ export default function StudentOnboardingPage() {
                     className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                     checked={consentPlacement}
                     onChange={(e) => setConsentPlacement(e.target.checked)}
+                    data-testid="consent-placement-cb"
                   />
                   <div className="text-sm">
                     <span className="font-medium text-foreground">
-                      Placement Cell Verification & Sharing
+                      Placement Cell Verification &amp; Sharing
                     </span>
                     <p className="text-xs text-muted-foreground">
                       I authorize my college placement office to verify my academic credentials and
@@ -384,22 +677,25 @@ export default function StudentOnboardingPage() {
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Button variant="ghost" onClick={() => setStep(1)} disabled={loading}>
+              <Button variant="ghost" onClick={() => setStep(1)} disabled={actionLoading}>
                 Back
               </Button>
               <Button
                 onClick={handleConsentsSubmit}
-                disabled={loading || !consentTerms || !consentPrivacy || !consentPlacement}
+                disabled={actionLoading || !consentTerms || !consentPrivacy || !consentPlacement}
+                data-testid="accept-consents-btn"
               >
-                {loading ? 'Recording Consents...' : 'Accept & Proceed'}
+                {actionLoading ? 'Recording Consents...' : 'Accept & Proceed'}
               </Button>
             </CardFooter>
           </Card>
         )}
 
+        {/* ======================================================== */}
         {/* STEP 3: ACADEMIC PROFILE */}
+        {/* ======================================================== */}
         {step === 3 && (
-          <Card className="shadow-md">
+          <Card className="shadow-md" data-testid="onboarding-step-3">
             <CardHeader>
               <CardTitle className="text-xl flex items-center space-x-2">
                 <BookOpen className="h-5 w-5 text-primary" />
@@ -432,23 +728,21 @@ export default function StudentOnboardingPage() {
                   <select
                     id="branch"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={branchCode}
-                    onChange={(e) => setBranchCode(e.target.value)}
+                    value={branchId}
+                    onChange={(e) => setBranchId(e.target.value)}
+                    data-testid="branch-select"
                   >
                     <option value="">Select branch...</option>
                     {selectedCollege?.branches && selectedCollege.branches.length > 0 ? (
                       selectedCollege.branches.map((b) => (
-                        <option key={b.branchCode} value={b.branchCode}>
-                          {b.branchName} ({b.branchCode})
+                        <option key={b.id} value={b.id}>
+                          {b.name || b.branchName || b.code} ({b.code || b.branchCode || ''})
                         </option>
                       ))
                     ) : (
-                      <>
-                        <option value="CSE">Computer Science & Engineering (CSE)</option>
-                        <option value="ECE">Electronics & Communication (ECE)</option>
-                        <option value="MECH">Mechanical Engineering (MECH)</option>
-                        <option value="CIVIL">Civil Engineering (CIVIL)</option>
-                      </>
+                      <option value="" disabled>
+                        No active branches found for selected college
+                      </option>
                     )}
                   </select>
                 </div>
@@ -475,6 +769,7 @@ export default function StudentOnboardingPage() {
                     placeholder="8.50"
                     value={cgpa}
                     onChange={(e) => setCgpa(e.target.value)}
+                    data-testid="cgpa-input"
                   />
                 </div>
 
@@ -535,19 +830,25 @@ export default function StudentOnboardingPage() {
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Button variant="ghost" onClick={() => setStep(2)} disabled={loading}>
+              <Button variant="ghost" onClick={() => setStep(2)} disabled={actionLoading}>
                 Back
               </Button>
-              <Button onClick={handleProfileSubmit} disabled={loading || !branchCode}>
-                {loading ? 'Submitting...' : 'Complete Onboarding'}
+              <Button
+                onClick={handleProfileSubmit}
+                disabled={actionLoading || !branchId}
+                data-testid="submit-profile-btn"
+              >
+                {actionLoading ? 'Submitting...' : 'Complete Onboarding'}
               </Button>
             </CardFooter>
           </Card>
         )}
 
-        {/* STEP 4: ONBOARDING COMPLETION STATUS */}
+        {/* ======================================================== */}
+        {/* STEP 4: VERIFICATION & COMPLETION STATUS */}
+        {/* ======================================================== */}
         {step === 4 && (
-          <Card className="shadow-md text-center p-6">
+          <Card className="shadow-md text-center p-6" data-testid="onboarding-step-4">
             <CardContent className="space-y-6 pt-4">
               {finalStatus === UserStatus.ACTIVE ? (
                 <>
@@ -557,13 +858,15 @@ export default function StudentOnboardingPage() {
                   <div className="space-y-2">
                     <CardTitle className="text-2xl font-bold">Profile Activated!</CardTitle>
                     <CardDescription className="max-w-md mx-auto text-sm">
-                      Your college email domain matched <strong>{selectedCollege?.name}</strong>.
-                      Your profile has been automatically verified and activated.
+                      Your college email domain matched{' '}
+                      <strong>{selectedCollege?.name || 'your institution'}</strong>. Your profile
+                      has been automatically verified and activated.
                     </CardDescription>
                   </div>
                   <Button
                     onClick={() => router.push('/student/dashboard')}
                     className="w-full max-w-xs mx-auto"
+                    data-testid="go-to-dashboard-btn"
                   >
                     Go to Dashboard
                   </Button>
@@ -578,13 +881,18 @@ export default function StudentOnboardingPage() {
                       Pending Placement Cell Approval
                     </CardTitle>
                     <CardDescription className="max-w-md mx-auto text-sm">
-                      Your profile has been registered for <strong>{selectedCollege?.name}</strong>.
-                      Your placement administrator must review and approve your account before drive
-                      access is granted.
+                      Your profile has been registered for{' '}
+                      <strong>{selectedCollege?.name || 'your institution'}</strong>. Your placement
+                      administrator must review and approve your account before drive access is
+                      granted.
                     </CardDescription>
                   </div>
                   <div className="flex flex-col sm:flex-row justify-center gap-3">
-                    <Button variant="outline" onClick={() => router.push('/student/dashboard')}>
+                    <Button
+                      variant="outline"
+                      onClick={() => router.push('/student/dashboard')}
+                      data-testid="view-dashboard-btn"
+                    >
                       View Student Dashboard
                     </Button>
                   </div>

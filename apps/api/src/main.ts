@@ -17,14 +17,61 @@ async function bootstrap() {
   const webOrigin = configService.get<string>('WEB_ORIGIN', 'http://localhost:3000');
 
   // Security Headers
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
 
-  // CORS limited to web origin
+  // CORS configuration
+  const webOriginsEnv = configService.get<string>('WEB_ORIGINS', '');
+  const envOrigins = [
+    ...(webOriginsEnv ? webOriginsEnv.split(',').map((o) => o.trim()) : []),
+    ...(webOrigin ? webOrigin.split(',').map((o) => o.trim()) : []),
+  ].filter(Boolean);
+
+  const devOrigins =
+    nodeEnv !== 'production'
+      ? [
+          'http://localhost:3000',
+          'http://127.0.0.1:3000',
+          'http://localhost:3001',
+          'http://127.0.0.1:3001',
+        ]
+      : [];
+
+  const allowedOrigins = Array.from(new Set([...envOrigins, ...devOrigins]));
+
   app.enableCors({
-    origin: webOrigin,
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      // Allow requests with no origin (mobile apps, server-to-server, curl) or allowlisted origins
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id', 'x-college-id'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Idempotency-Key',
+      'x-request-id',
+      'x-college-id',
+      'x-client-info',
+    ],
+    exposedHeaders: [
+      'x-request-id',
+      'x-ratelimit-limit',
+      'x-ratelimit-remaining',
+      'x-ratelimit-reset',
+    ],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   // Request-ID and Pino logging
@@ -63,6 +110,9 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1', {
     exclude: ['auth/me'],
   });
+
+  // Enable NestJS shutdown hooks for graceful termination
+  app.enableShutdownHooks();
 
   // Swagger Documentation (disabled in production)
   if (nodeEnv !== 'production') {

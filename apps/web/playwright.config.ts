@@ -1,4 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const apiEnv = path.resolve(__dirname, '../api/.env');
+const webEnv = path.resolve(__dirname, '.env.local');
+if (fs.existsSync(apiEnv)) {
+  process.loadEnvFile(apiEnv);
+}
+if (fs.existsSync(webEnv)) {
+  process.loadEnvFile(webEnv);
+}
 
 export default defineConfig({
   testDir: './e2e',

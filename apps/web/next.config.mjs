@@ -1,4 +1,43 @@
 /** @type {import('next').NextConfig} */
+function getConnectSources() {
+  const sources = new Set(["'self'"]);
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (supabaseUrl) {
+    try {
+      const parsed = new URL(supabaseUrl);
+      sources.add(parsed.origin);
+      const wsProtocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
+      sources.add(`${wsProtocol}//${parsed.host}`);
+    } catch {
+      // Invalid URL handled by env validator
+    }
+  }
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  if (apiUrl) {
+    try {
+      const parsed = new URL(apiUrl);
+      sources.add(parsed.origin);
+    } catch {
+      // Invalid URL handled by env validator
+    }
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    sources.add('http://localhost:3000');
+    sources.add('ws://localhost:3000');
+    sources.add('http://localhost:4000');
+    sources.add('http://127.0.0.1:3000');
+    sources.add('ws://127.0.0.1:3000');
+    sources.add('http://127.0.0.1:4000');
+    sources.add('http://127.0.0.1:54321');
+    sources.add('ws://127.0.0.1:54321');
+  }
+
+  return Array.from(sources).join(' ');
+}
+
 const securityHeaders = [
   {
     key: 'X-DNS-Prefetch-Control',
@@ -36,13 +75,14 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:* ws://localhost:*",
+      `connect-src ${getConnectSources()}`,
       "frame-ancestors 'none'",
     ].join('; '),
   },
 ];
 
 const nextConfig = {
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   reactStrictMode: true,
   transpilePackages: ['@campusedge/shared'],
   async headers() {

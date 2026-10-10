@@ -37,6 +37,11 @@ export class MeController {
             status: true,
             emailDomains: true,
             requireStudentApproval: true,
+            branches: {
+              where: { isActive: true },
+              select: { id: true, code: true, name: true },
+              orderBy: { code: 'asc' },
+            },
           },
         },
         consents: {

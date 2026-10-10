@@ -201,8 +201,8 @@ export class ApplicationsService {
    * Placement Cell: list applicants for a drive with filters.
    */
   async list(collegeId: string, query: ApplicationQueryDto) {
-    const page = query.page || 1;
-    const limit = query.limit || 50;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
     const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = { collegeId };

@@ -15,20 +15,24 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}${next}`);
       }
 
-      // Query /api/v1/auth/me from NestJS backend to determine destination
+      // Query /me from NestJS backend to determine destination
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-        const cleanBase = apiUrl.replace(/\/+$/, '').replace(/\/api\/v1$/, '');
-        const res = await fetch(`${cleanBase}/api/v1/me`, {
+        const rawApiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(
+          /\/+$/,
+          '',
+        );
+        const apiUrl = rawApiUrl.endsWith('/api/v1') ? rawApiUrl : `${rawApiUrl}/api/v1`;
+        const res = await fetch(`${apiUrl}/me`, {
           headers: {
             Authorization: `Bearer ${authData.session.access_token}`,
           },
         });
 
         if (res.ok) {
-          const profile = await res.json();
-          const role = profile.role || profile.data?.role;
-          const status = profile.status || profile.data?.status;
+          const resJson = await res.json();
+          const profile = resJson.data || resJson;
+          const role = profile.role;
+          const status = profile.status;
 
           if (role === 'SUPER_ADMIN') {
             return NextResponse.redirect(`${origin}/admin/colleges`);

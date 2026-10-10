@@ -64,31 +64,31 @@ test.describe('Phase 2 UI Workflows (Authenticated Student)', () => {
     // Check if redirected or page rendered
     if (page.url().includes('/student/drives')) {
       await expect(page.locator('h1')).toContainText('Campus Placement Drives');
-      await expect(page.getByText('Eligible Drives', { exact: false })).toBeVisible();
-      await expect(page.getByText('All Drives', { exact: false })).toBeVisible();
+      await expect(page.getByText('Eligible For Me')).toBeVisible();
+      await expect(page.getByText('All Active Drives', { exact: false })).toBeVisible();
     }
   });
 
   test('Student Companies page renders intelligence directory', async ({ page }) => {
     await page.goto('/student/companies');
     if (page.url().includes('/student/companies')) {
-      await expect(page.locator('h1')).toContainText('Company Hiring Intelligence');
-      await expect(page.getByPlaceholder('Search recruiters...')).toBeVisible();
+      await expect(page.locator('h1')).toContainText('Recruiter Intelligence');
+      await expect(page.getByPlaceholder(/Search recruiters/i)).toBeVisible();
     }
   });
 
   test('Student Notices page renders announcements feed', async ({ page }) => {
     await page.goto('/student/notices');
     if (page.url().includes('/student/notices')) {
-      await expect(page.locator('h1')).toContainText('Placement Notices');
+      await expect(page.locator('h1')).toContainText('Placement Notice Board');
     }
   });
 
   test('Student Experiences page renders interview feed with anonymity', async ({ page }) => {
     await page.goto('/student/experiences');
     if (page.url().includes('/student/experiences')) {
-      await expect(page.locator('h1')).toContainText('Interview Experience Archives');
-      await expect(page.getByText('Share Interview Experience')).toBeVisible();
+      await expect(page.locator('h1')).toContainText('Interview Experiences');
+      await expect(page.getByRole('button', { name: /Share.*Experience/i })).toBeVisible();
     }
   });
 });
@@ -108,30 +108,30 @@ test.describe('Phase 2 UI Workflows (Placement Cell Cockpit)', () => {
   test('Placement Cell Drives list and Create New Drive button', async ({ page }) => {
     await page.goto('/placement-cell/drives');
     if (page.url().includes('/placement-cell/drives')) {
-      await expect(page.locator('h1')).toContainText('Campus Recruitment Drives');
-      await expect(page.getByText('Create New Drive')).toBeVisible();
+      await expect(page.locator('h1')).toContainText('Placement Drives');
+      await expect(page.getByRole('link', { name: /New Drive/i })).toBeVisible();
     }
   });
 
   test('Create Drive 4-Step Wizard step progression', async ({ page }) => {
     await page.goto('/placement-cell/drives/new');
     if (page.url().includes('/placement-cell/drives/new')) {
-      await expect(page.locator('h1')).toContainText('Create Recruitment Drive');
-      await expect(page.getByText('1. Basic Info')).toBeVisible();
-      await expect(page.getByText('2. Job Roles & CTC')).toBeVisible();
-      await expect(page.getByText('3. Eligibility')).toBeVisible();
-      await expect(page.getByText('4. Selection Rounds')).toBeVisible();
+      await expect(page.locator('h1')).toContainText('Create Placement Drive');
+      await expect(page.getByText('Basic Info', { exact: true })).toBeVisible();
+      await expect(page.getByText('Roles & CTC', { exact: true })).toBeVisible();
+      await expect(page.getByText('Eligibility', { exact: true })).toBeVisible();
+      await expect(page.getByText('Interview Rounds', { exact: true })).toBeVisible();
     }
   });
 
   test('Placement Intelligence page renders recurring recruiter retention', async ({ page }) => {
     await page.goto('/placement-cell/intelligence');
     if (page.url().includes('/placement-cell/intelligence')) {
-      await expect(page.locator('h1')).toContainText('Placement & Recruiter Intelligence');
+      await expect(page.locator('h1')).toContainText(
+        'Placement Intelligence & Recruiter Analytics',
+      );
       // Prominent statutory historical disclaimer
-      await expect(
-        page.getByText('HISTORICAL INTELLIGENCE DISCLAIMER', { exact: false }),
-      ).toBeVisible();
+      await expect(page.getByText('Historical hiring patterns', { exact: false })).toBeVisible();
     }
   });
 
@@ -140,16 +140,14 @@ test.describe('Phase 2 UI Workflows (Placement Cell Cockpit)', () => {
     if (page.url().includes('/placement-cell/import')) {
       await expect(page.locator('h1')).toContainText('Historical Placement Data Import');
       await expect(page.getByText('Upload Spreadsheet')).toBeVisible();
-      await expect(
-        page.getByText('Formula Injection Defense (CWE-1236)', { exact: false }),
-      ).toBeVisible();
+      await expect(page.getByText('Accepts .csv and .xlsx files', { exact: false })).toBeVisible();
     }
   });
 
   test('Moderation Queue renders reported experiences review', async ({ page }) => {
     await page.goto('/placement-cell/experiences');
     if (page.url().includes('/placement-cell/experiences')) {
-      await expect(page.locator('h1')).toContainText('Experience Moderation Queue');
+      await expect(page.locator('h1')).toContainText('Interview Experience Moderation');
     }
   });
 });

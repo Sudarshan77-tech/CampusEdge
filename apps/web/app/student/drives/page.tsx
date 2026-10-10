@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { api, ApiError } from '@/lib/api';
+import { api } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,7 +48,7 @@ export default function StudentDrivesPage() {
       const res = await api.get<{ items: StudentDriveItem[] }>('/drives?limit=50');
       setDrives(res.items || []);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to load drives');
+      setError((err as Error).message || 'Failed to load drives');
     } finally {
       setLoading(false);
     }
@@ -70,7 +70,7 @@ export default function StudentDrivesPage() {
       setConsentChecked(false);
       fetchDrives();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : 'Application submission failed');
+      alert((err as Error).message || 'Application submission failed');
     } finally {
       setApplying(false);
     }
@@ -104,8 +104,11 @@ export default function StudentDrivesPage() {
       </div>
 
       {error && (
-        <div className="p-4 rounded-md border border-destructive/50 bg-destructive/10 text-destructive text-sm">
-          {error}
+        <div className="p-4 rounded-md border border-destructive/50 bg-destructive/10 text-destructive text-sm flex items-center justify-between gap-3">
+          <span>{error}</span>
+          <Button variant="outline" size="sm" onClick={() => fetchDrives()}>
+            Retry
+          </Button>
         </div>
       )}
 

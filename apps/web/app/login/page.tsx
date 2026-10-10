@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/lib/api';
+import { formatAuthError } from '@/lib/auth-errors';
 import { Role, UserStatus } from '@campusedge/shared';
 
 interface UserProfile {
@@ -42,20 +43,19 @@ function LoginForm() {
 
   const handleRedirect = async () => {
     try {
-      const profile = await api.get<UserProfile>('/auth/me');
-      const role = profile.role || (profile as unknown as { data?: UserProfile }).data?.role;
-      const status = profile.status || (profile as unknown as { data?: UserProfile }).data?.status;
+      const res = await api.get<{ data?: UserProfile } & UserProfile>('/me');
+      const profile: UserProfile = res.data && res.data.role ? res.data : res;
 
       if (redirectTo) {
         router.push(redirectTo);
         return;
       }
-      if (role === Role.SUPER_ADMIN) {
+      if (profile.role === Role.SUPER_ADMIN) {
         router.push('/admin/colleges');
-      } else if (role === Role.COLLEGE_ADMIN) {
+      } else if (profile.role === Role.COLLEGE_ADMIN) {
         router.push('/placement-cell/dashboard');
-      } else if (role === Role.STUDENT) {
-        if (status === UserStatus.ONBOARDING) {
+      } else if (profile.role === Role.STUDENT) {
+        if (profile.status === UserStatus.ONBOARDING) {
           router.push('/student/onboarding');
         } else {
           router.push('/student/dashboard');
@@ -80,14 +80,14 @@ function LoginForm() {
       });
 
       if (signInError) {
-        setError(signInError.message);
+        setError(formatAuthError(signInError, 'login'));
         setLoading(false);
         return;
       }
 
       await handleRedirect();
     } catch (err) {
-      setError((err as Error).message);
+      setError(formatAuthError(err, 'login'));
       setLoading(false);
     }
   };
@@ -106,12 +106,12 @@ function LoginForm() {
       });
 
       if (otpError) {
-        setError(otpError.message);
+        setError(formatAuthError(otpError, 'magic-link'));
       } else {
         setMagicLinkSent(true);
       }
     } catch (err) {
-      setError((err as Error).message);
+      setError(formatAuthError(err, 'magic-link'));
     } finally {
       setLoading(false);
     }
@@ -130,6 +130,7 @@ function LoginForm() {
         <CardContent>
           {error && (
             <div
+              data-testid="auth-error"
               className="mb-4 rounded-md bg-destructive/15 p-3 text-sm text-destructive"
               role="alert"
             >

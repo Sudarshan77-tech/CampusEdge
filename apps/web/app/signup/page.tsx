@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { formatAuthError } from '@/lib/auth-errors';
 import { Check, X } from 'lucide-react';
 
 export default function SignupPage() {
@@ -60,7 +61,7 @@ export default function SignupPage() {
       });
 
       if (signUpError) {
-        setError(signUpError.message);
+        setError(formatAuthError(signUpError, 'signup'));
         setLoading(false);
         return;
       }
@@ -73,7 +74,7 @@ export default function SignupPage() {
         setSignupComplete(true);
       }
     } catch (err) {
-      setError((err as Error).message);
+      setError(formatAuthError(err, 'signup'));
     } finally {
       setLoading(false);
     }
@@ -92,6 +93,7 @@ export default function SignupPage() {
         <CardContent>
           {error && (
             <div
+              data-testid="auth-error"
               className="mb-4 rounded-md bg-destructive/15 p-3 text-sm text-destructive"
               role="alert"
             >
@@ -100,7 +102,7 @@ export default function SignupPage() {
           )}
 
           {signupComplete ? (
-            <div className="space-y-4 text-center">
+            <div data-testid="signup-success" className="space-y-4 text-center">
               <div className="rounded-md bg-emerald-50 p-4 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
                 <p className="font-semibold text-base mb-1">Check your inbox</p>A verification email
                 has been sent to <strong>{email}</strong>. Please click the link inside to verify
