@@ -11,10 +11,26 @@ import {
 } from '@campusedge/shared';
 import { ForbiddenException, ConflictException, BadRequestException } from '@nestjs/common';
 
+interface MockPrismaClient {
+  attempt: { findFirst: jest.Mock; findMany: jest.Mock; create: jest.Mock };
+  attemptItem: { createMany: jest.Mock };
+  studentProfile: { findUnique: jest.Mock };
+  testTemplate: { findFirst: jest.Mock; create: jest.Mock; findUniqueOrThrow: jest.Mock };
+  testSection: { createMany: jest.Mock };
+  topic: { findMany: jest.Mock };
+  question: { findMany: jest.Mock; findUnique: jest.Mock };
+  $transaction: jest.Mock;
+}
+
+interface MockAttemptsService {
+  finalizeAttempt: jest.Mock;
+  getAttempt: jest.Mock;
+}
+
 describe('DiagnosticsService', () => {
   let service: DiagnosticsService;
-  let mockPrisma: any;
-  let mockAttemptsService: any;
+  let mockPrisma: MockPrismaClient;
+  let mockAttemptsService: MockAttemptsService;
 
   const mockStudent: CurrentUser = {
     userId: '11111111-1111-1111-1111-111111111111',
@@ -155,7 +171,7 @@ describe('DiagnosticsService', () => {
     it('rejects student with missing college context', async () => {
       const studentWithoutCollege: CurrentUser = {
         ...mockStudent,
-        collegeId: null as any,
+        collegeId: null as unknown as string,
       };
       await expect(service.startDiagnostic(studentWithoutCollege)).rejects.toThrow(
         BadRequestException,

@@ -24,6 +24,7 @@ import { TestsModule } from './tests/tests.module';
 import { AttemptsModule } from './attempts/attempts.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { DiagnosticsModule } from './diagnostics/diagnostics.module';
+import { CockpitsModule } from './cockpits/cockpits.module';
 import { PrismaService } from './prisma.service';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
@@ -61,6 +62,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     AttemptsModule,
     AnalyticsModule,
     DiagnosticsModule,
+    CockpitsModule,
   ],
   providers: [
     PrismaService,

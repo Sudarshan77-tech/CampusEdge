@@ -5,6 +5,7 @@ import {
   RecordEventDto,
 } from './attempts.service';
 import { PrismaService } from '../prisma.service';
+import { RoadmapService } from '../analytics/roadmap.service';
 import {
   Role,
   CurrentUser,
@@ -145,7 +146,10 @@ describe('AttemptsService & Zero Leakage Security Contract', () => {
       generateAndSaveRoadmap: jest.fn().mockResolvedValue({}),
     };
 
-    service = new AttemptsService(prisma as unknown as PrismaService, mockRoadmapService as any);
+    service = new AttemptsService(
+      prisma as unknown as PrismaService,
+      mockRoadmapService as unknown as RoadmapService,
+    );
   });
 
   describe('startAttempt', () => {

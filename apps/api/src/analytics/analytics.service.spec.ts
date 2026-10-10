@@ -13,10 +13,27 @@ import {
 } from '@campusedge/shared';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
+interface MockPrismaClient {
+  studentProfile: { findUnique: jest.Mock; update: jest.Mock };
+  attempt: { findFirst: jest.Mock; findMany: jest.Mock };
+  attemptItem: { findMany: jest.Mock };
+  studentTopicStat: { findMany: jest.Mock };
+  topic: { findMany: jest.Mock };
+  drive: { findMany: jest.Mock };
+  roadmapPlan: {
+    findFirst: jest.Mock;
+    updateMany: jest.Mock;
+    create: jest.Mock;
+    findUnique: jest.Mock;
+  };
+  roadmapTask: { createMany: jest.Mock; findUnique: jest.Mock; update: jest.Mock };
+  $transaction: jest.Mock;
+}
+
 describe('AnalyticsService and RoadmapService (Part 3D)', () => {
   let analyticsService: AnalyticsService;
   let roadmapService: RoadmapService;
-  let mockPrisma: any;
+  let mockPrisma: MockPrismaClient;
 
   const mockStudent: CurrentUser = {
     userId: '11111111-1111-1111-1111-111111111111',
