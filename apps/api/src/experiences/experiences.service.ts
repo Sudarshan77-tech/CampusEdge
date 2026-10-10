@@ -232,8 +232,8 @@ export class ExperiencesService {
   async list(user: CurrentUser, query: ExperienceQueryDto) {
     if (!user.collegeId) throw new ForbiddenException('College context required');
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = {
@@ -355,8 +355,8 @@ export class ExperiencesService {
   async listModerationQueue(user: CurrentUser, query: ExperienceQueryDto) {
     if (!user.collegeId) throw new ForbiddenException('College context required');
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = {

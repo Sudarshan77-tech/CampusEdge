@@ -62,26 +62,27 @@ export default function StudentProfilePage() {
   const [dataReqSuccess, setDataReqSuccess] = React.useState<string | null>(null);
   const [dataReqLoading, setDataReqLoading] = React.useState(false);
 
-  React.useEffect(() => {
-    async function loadProfile() {
-      try {
-        setLoading(true);
-        const data = await api.get<StudentProfileData>('/students/me/profile');
-        setProfile(data);
-        if (data.studentProfile) {
-          setCgpa(String(data.studentProfile.cgpa));
-          setBacklogs(data.studentProfile.activeBacklogs);
-          setSkills(data.studentProfile.skills?.map((s) => s.skillName) || []);
-        }
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
+  const loadProfile = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await api.get<StudentProfileData>('/students/me/profile');
+      setProfile(data);
+      if (data.studentProfile) {
+        setCgpa(String(data.studentProfile.cgpa));
+        setBacklogs(data.studentProfile.activeBacklogs);
+        setSkills(data.studentProfile.skills?.map((s) => s.skillName) || []);
       }
+    } catch (err) {
+      setError((err as Error).message || 'Failed to load profile');
+    } finally {
+      setLoading(false);
     }
-
-    loadProfile();
   }, []);
+
+  React.useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,9 +176,14 @@ export default function StudentProfilePage() {
         </div>
 
         {error && (
-          <div className="rounded-lg bg-destructive/15 p-4 text-sm text-destructive flex items-center space-x-2">
-            <AlertCircle className="h-4 w-4" />
-            <span>{error}</span>
+          <div className="rounded-lg bg-destructive/15 p-4 text-sm text-destructive flex items-center justify-between gap-3">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => loadProfile()}>
+              Retry
+            </Button>
           </div>
         )}
 

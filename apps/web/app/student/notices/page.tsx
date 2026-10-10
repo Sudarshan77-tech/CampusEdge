@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { api, ApiError } from '@/lib/api';
+import { api } from '@/lib/api';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Pin, Paperclip, Bell, Calendar } from 'lucide-react';
 
@@ -26,7 +26,7 @@ export default function StudentNoticesPage() {
       const res = await api.get<{ items: NoticeItem[] }>('/notices?limit=50');
       setNotices(res.items || []);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to load notices');
+      setError((err as Error).message || 'Failed to load notices');
     } finally {
       setLoading(false);
     }
@@ -43,7 +43,7 @@ export default function StudentNoticesPage() {
       );
       window.open(res.signedUrl, '_blank');
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : 'Failed to download attachment');
+      alert((err as Error).message || 'Failed to download attachment');
     }
   };
 
@@ -57,8 +57,15 @@ export default function StudentNoticesPage() {
       </div>
 
       {error && (
-        <div className="p-4 rounded-md border border-destructive/50 bg-destructive/10 text-destructive text-sm">
-          {error}
+        <div className="p-4 rounded-md border border-destructive/50 bg-destructive/10 text-destructive text-sm flex items-center justify-between gap-3">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => fetchNotices()}
+            className="rounded border border-destructive px-2.5 py-1 text-xs font-medium hover:bg-destructive/20 transition-colors flex-shrink-0"
+          >
+            Retry
+          </button>
         </div>
       )}
 

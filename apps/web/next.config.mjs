@@ -14,7 +14,7 @@ function getConnectSources() {
     }
   }
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
   if (apiUrl) {
     try {
       const parsed = new URL(apiUrl);
@@ -82,6 +82,7 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   reactStrictMode: true,
   transpilePackages: ['@campusedge/shared'],
   async headers() {

@@ -9,27 +9,36 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { Role, UserStatus } from '@campusedge/shared';
-import { BookOpen, Clock, Sparkles, UserCheck } from 'lucide-react';
+import { BookOpen, Clock, Sparkles, UserCheck, AlertCircle, RotateCcw } from 'lucide-react';
 
 interface StudentProfileResponse {
-  id: string;
-  email: string;
+  id?: string;
+  email?: string;
   fullName?: string;
-  role: Role;
-  status: UserStatus;
+  role?: Role;
+  status?: UserStatus;
   college?: {
-    name: string;
-    code: string;
+    id?: string;
+    name?: string;
+    code?: string;
+    slug?: string;
   };
   studentProfile?: {
-    degree: string;
-    branchCode: string;
-    batchYear: number;
-    cgpa: number;
-    activeBacklogs: number;
+    degree?: string;
+    branchCode?: string;
+    branchName?: string;
+    batchYear?: number;
+    cgpa?: number;
+    activeBacklogs?: number;
     skills?: Array<{ skillName: string; proficiency: string }>;
   };
+  degree?: string;
+  branchCode?: string;
+  batchYear?: number;
+  cgpa?: number;
+  activeBacklogs?: number;
   completionPercentage?: number;
+  profileCompletion?: number;
 }
 
 export default function StudentDashboardPage() {
@@ -38,26 +47,58 @@ export default function StudentDashboardPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    async function loadData() {
+  const loadData = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Attempt to load student profile
+      let data: StudentProfileResponse;
       try {
-        setLoading(true);
-        const data = await api.get<StudentProfileResponse>('/students/me/profile');
-        setProfile(data);
-
-        // If user is in ONBOARDING state, redirect to onboarding
-        if (data.status === UserStatus.ONBOARDING) {
-          router.push('/student/onboarding');
+        data = await api.get<StudentProfileResponse>('/students/me/profile');
+      } catch (err: unknown) {
+        // If 404 or missing profile, check canonical /me state
+        try {
+          const meData = await api.get<StudentProfileResponse & { onboardingStep?: string }>('/me');
+          if (
+            meData.status === UserStatus.ONBOARDING ||
+            meData.onboardingStep !== 'COMPLETED' ||
+            !meData.studentProfile
+          ) {
+            router.push('/student/onboarding');
+            return;
+          }
+          data = {
+            id: meData.id,
+            email: meData.email,
+            fullName: meData.fullName,
+            role: meData.role,
+            status: meData.status,
+            college: meData.college,
+            studentProfile: meData.studentProfile,
+            completionPercentage: meData.profileCompletion ?? 85,
+          };
+        } catch {
+          throw err;
         }
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
       }
-    }
 
-    loadData();
+      setProfile(data);
+
+      // If user is in ONBOARDING state, redirect to onboarding
+      if (data.status === UserStatus.ONBOARDING) {
+        router.push('/student/onboarding');
+      }
+    } catch (err) {
+      setError((err as Error).message || 'Failed to load dashboard data.');
+    } finally {
+      setLoading(false);
+    }
   }, [router]);
+
+  React.useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const getStatusBadge = (status?: UserStatus) => {
     switch (status) {
@@ -72,15 +113,24 @@ export default function StudentDashboardPage() {
     }
   };
 
+  const displayName =
+    profile?.fullName || (profile?.email ? profile.email.split('@')[0] : 'Student');
+  const collegeName = profile?.college?.name || 'Your College';
+  const collegeCode = profile?.college?.code || profile?.college?.slug?.toUpperCase() || '';
+  const degree = profile?.studentProfile?.degree || profile?.degree || 'Engineering';
+  const branch = profile?.studentProfile?.branchCode || profile?.branchCode || '';
+  const batchYear = profile?.studentProfile?.batchYear || profile?.batchYear;
+  const completion = profile?.completionPercentage ?? profile?.profileCompletion ?? 85;
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <Navbar
         user={
-          profile
+          profile?.email
             ? {
                 email: profile.email,
-                role: profile.role,
-                status: profile.status,
+                role: profile.role || Role.STUDENT,
+                status: profile.status || UserStatus.ACTIVE,
                 fullName: profile.fullName,
               }
             : null
@@ -89,11 +139,42 @@ export default function StudentDashboardPage() {
 
       <main className="container mx-auto px-4 py-8 max-w-6xl space-y-6">
         {loading ? (
-          <div className="flex h-64 items-center justify-center text-muted-foreground">
-            Loading your student dashboard...
+          <div className="space-y-6 animate-pulse" data-testid="dashboard-loading-skeleton">
+            {/* Banner Skeleton */}
+            <div className="h-32 rounded-xl bg-slate-200 dark:bg-slate-800" />
+            {/* Completion Card Skeleton */}
+            <div className="h-24 rounded-lg bg-slate-200 dark:bg-slate-800" />
+            {/* Feature Cards Skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="h-44 rounded-lg bg-slate-200 dark:bg-slate-800" />
+              <div className="h-44 rounded-lg bg-slate-200 dark:bg-slate-800" />
+              <div className="h-44 rounded-lg bg-slate-200 dark:bg-slate-800" />
+            </div>
           </div>
         ) : error ? (
-          <div className="rounded-lg bg-destructive/15 p-4 text-destructive">{error}</div>
+          <Card className="border-destructive/20 shadow-md">
+            <CardHeader>
+              <div className="flex items-center space-x-2 text-destructive">
+                <AlertCircle className="h-5 w-5" />
+                <CardTitle className="text-lg">Dashboard Error</CardTitle>
+              </div>
+              <CardDescription>We could not load your dashboard data at this time.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive font-mono">
+                {error}
+              </div>
+            </CardContent>
+            <div className="p-6 pt-0 flex gap-3">
+              <Button onClick={() => loadData()} variant="outline" size="sm">
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Try Again
+              </Button>
+              <Button asChild size="sm">
+                <Link href="/student/onboarding">Go to Onboarding</Link>
+              </Button>
+            </div>
+          </Card>
         ) : profile ? (
           <>
             {/* Banner Header */}
@@ -102,14 +183,15 @@ export default function StudentDashboardPage() {
                 <div>
                   <div className="flex items-center space-x-3 mb-1">
                     <h1 className="text-2xl font-bold tracking-tight">
-                      Welcome back, {profile.fullName || profile.email.split('@')[0]}!
+                      Welcome back, {displayName}!
                     </h1>
                     {getStatusBadge(profile.status)}
                   </div>
                   <p className="text-blue-100 text-sm">
-                    {profile.college?.name} ({profile.college?.code}) &bull;{' '}
-                    {profile.studentProfile?.degree} in {profile.studentProfile?.branchCode} &bull;
-                    Class of {profile.studentProfile?.batchYear}
+                    {collegeName}
+                    {collegeCode ? ` (${collegeCode})` : ''}
+                    {branch ? ` \u2022 ${degree} in ${branch}` : ` \u2022 ${degree}`}
+                    {batchYear ? ` \u2022 Class of ${batchYear}` : ''}
                   </p>
                 </div>
 
@@ -146,16 +228,14 @@ export default function StudentDashboardPage() {
                       Complete your profile to increase your visibility to recruiting partners
                     </CardDescription>
                   </div>
-                  <span className="text-2xl font-bold text-primary">
-                    {profile.completionPercentage ?? 85}%
-                  </span>
+                  <span className="text-2xl font-bold text-primary">{completion}%</span>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="w-full bg-slate-200 rounded-full h-2.5 dark:bg-slate-700">
                   <div
                     className="bg-primary h-2.5 rounded-full transition-all duration-500"
-                    style={{ width: `${profile.completionPercentage ?? 85}%` }}
+                    style={{ width: `${completion}%` }}
                   />
                 </div>
               </CardContent>
@@ -191,7 +271,7 @@ export default function StudentDashboardPage() {
                   </div>
                   <CardDescription>
                     Practice coding and technical questions customized to past hiring trends at{' '}
-                    {profile.college?.name || 'your college'}.
+                    {collegeName}.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

@@ -27,8 +27,8 @@ export class CompaniesService {
    * College staff/students see VERIFIED companies plus companies created by their own college.
    */
   async list(user: CurrentUser, query: CompanyQueryDto) {
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = {};
@@ -270,8 +270,8 @@ export class CompaniesService {
    * Super Admin list pending review companies.
    */
   async listPending(query: CompanyQueryDto) {
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const skip = (page - 1) * limit;
 
     const [items, total] = await Promise.all([

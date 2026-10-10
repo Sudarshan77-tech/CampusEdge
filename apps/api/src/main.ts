@@ -23,14 +23,24 @@ async function bootstrap() {
     }),
   );
 
-  // CORS allowing development ports and configured web origin
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001',
-    webOrigin,
-  ].filter(Boolean) as string[];
+  // CORS configuration
+  const webOriginsEnv = configService.get<string>('WEB_ORIGINS', '');
+  const envOrigins = [
+    ...(webOriginsEnv ? webOriginsEnv.split(',').map((o) => o.trim()) : []),
+    ...(webOrigin ? webOrigin.split(',').map((o) => o.trim()) : []),
+  ].filter(Boolean);
+
+  const devOrigins =
+    nodeEnv !== 'production'
+      ? [
+          'http://localhost:3000',
+          'http://127.0.0.1:3000',
+          'http://localhost:3001',
+          'http://127.0.0.1:3001',
+        ]
+      : [];
+
+  const allowedOrigins = Array.from(new Set([...envOrigins, ...devOrigins]));
 
   app.enableCors({
     origin: (
@@ -38,7 +48,7 @@ async function bootstrap() {
       callback: (err: Error | null, allow?: boolean) => void,
     ) => {
       // Allow requests with no origin (mobile apps, server-to-server, curl) or allowlisted origins
-      if (!origin || allowedOrigins.includes(origin) || nodeEnv !== 'production') {
+      if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error(`Origin ${origin} not allowed by CORS`));
@@ -46,7 +56,22 @@ async function bootstrap() {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id', 'x-college-id'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Idempotency-Key',
+      'x-request-id',
+      'x-college-id',
+      'x-client-info',
+    ],
+    exposedHeaders: [
+      'x-request-id',
+      'x-ratelimit-limit',
+      'x-ratelimit-remaining',
+      'x-ratelimit-reset',
+    ],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   // Request-ID and Pino logging

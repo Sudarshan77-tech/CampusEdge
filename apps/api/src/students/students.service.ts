@@ -5,6 +5,7 @@ import {
   CreateDataRequestDto,
   DataRequestStatus,
   CurrentUser,
+  UserStatus,
 } from '@campusedge/shared';
 
 @Injectable()
@@ -15,6 +16,15 @@ export class StudentsService {
     const studentProfile = await this.prisma.studentProfile.findUnique({
       where: { userId: user.userId },
       include: {
+        userProfile: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            role: true,
+            status: true,
+          },
+        },
         branch: true,
         college: { select: { id: true, name: true, slug: true } },
         studentSkills: {
@@ -40,9 +50,42 @@ export class StudentsService {
 
     const completionPercentage = Math.round((points / maxPoints) * 100);
 
+    const skills = studentProfile.studentSkills.map((s) => ({
+      skillId: s.skillId,
+      skillName: s.skill?.name || '',
+      proficiency: s.proficiency,
+    }));
+
+    const collegeInfo = studentProfile.college
+      ? {
+          id: studentProfile.college.id,
+          name: studentProfile.college.name,
+          slug: studentProfile.college.slug,
+          code: studentProfile.college.slug?.toUpperCase() || '',
+        }
+      : undefined;
+
+    const nestedStudentProfile = {
+      degree: studentProfile.degree,
+      branchCode: studentProfile.branch?.code || '',
+      branchName: studentProfile.branch?.name || '',
+      batchYear: studentProfile.batchYear,
+      cgpa: Number(studentProfile.cgpa),
+      activeBacklogs: studentProfile.activeBacklogs,
+      skills,
+    };
+
     return {
       ...studentProfile,
+      id: studentProfile.userProfile?.id || user.userId,
+      email: studentProfile.userProfile?.email || user.email,
+      fullName: studentProfile.userProfile?.fullName || '',
+      role: studentProfile.userProfile?.role || user.role,
+      status: studentProfile.userProfile?.status || UserStatus.ACTIVE,
+      college: collegeInfo,
       completionPercentage,
+      studentProfile: nestedStudentProfile,
+      cgpa: Number(studentProfile.cgpa),
     };
   }
 

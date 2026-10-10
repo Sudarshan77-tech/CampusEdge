@@ -162,8 +162,8 @@ export class DrivesService {
    * List drives with filter constraints and student view rules.
    */
   async list(collegeId: string, user: CurrentUser, query: DriveQueryDto) {
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = { collegeId };
