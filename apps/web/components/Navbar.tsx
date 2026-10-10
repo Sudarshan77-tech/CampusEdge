@@ -37,6 +37,8 @@ export function Navbar({ user }: NavbarProps) {
         { href: '/admin/colleges', label: 'Colleges' },
         { href: '/admin/companies', label: 'Companies' },
         { href: '/admin/topics', label: 'Topics' },
+        { href: '/admin/readiness', label: 'Readiness' },
+        { href: '/admin/moderation', label: 'Moderation' },
         { href: '/admin/experiences', label: 'Takedowns' },
         { href: '/admin/users', label: 'Users' },
         { href: '/admin/audit', label: 'Audit' },
@@ -46,6 +48,8 @@ export function Navbar({ user }: NavbarProps) {
     if (user.role === Role.COLLEGE_ADMIN) {
       return [
         { href: '/placement-cell/dashboard', label: 'Dashboard' },
+        { href: '/placement-cell/readiness', label: 'Readiness' },
+        { href: '/placement-cell/tests', label: 'Tests' },
         { href: '/placement-cell/drives', label: 'Drives' },
         { href: '/placement-cell/companies', label: 'Companies' },
         { href: '/placement-cell/seasons', label: 'Seasons' },
@@ -61,6 +65,9 @@ export function Navbar({ user }: NavbarProps) {
     if (user.role === Role.STUDENT) {
       return [
         { href: '/student/dashboard', label: 'Dashboard' },
+        { href: '/student/readiness', label: 'Readiness' },
+        { href: '/student/roadmap', label: 'Roadmap' },
+        { href: '/student/diagnostics', label: 'Diagnostics' },
         { href: '/student/drives', label: 'Drives' },
         { href: '/student/companies', label: 'Intelligence' },
         { href: '/student/notices', label: 'Notices' },
