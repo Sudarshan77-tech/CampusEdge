@@ -289,6 +289,19 @@ model College {
   readinessSnapshots  ReadinessSnapshot[]
   roadmapPlans        RoadmapPlan[]
   feedback            Feedback[]
+  features                   CollegeFeature[]
+  driveEvents                DriveEvent[]
+  collegeEvents              CollegeEvent[]
+  calendarFeedTokens         CalendarFeedToken[]
+  companyFollows             CompanyFollow[]
+  collegeCompanyNotes        CollegeCompanyNote[]
+  prepResources              PrepResource[]
+  interviewQuestions         InterviewQuestion[]
+  interviewQuestionProgress  InterviewQuestionProgress[]
+  studentCompanyScores       StudentCompanyScore[]
+  notifications              Notification[]
+  notificationPreferences    NotificationPreference[]
+  emailOutbox                EmailOutbox[]
 
   @@map("colleges")
 }
@@ -317,6 +330,15 @@ model UserProfile {
   readinessSnapshots         ReadinessSnapshot[]
   roadmapPlans               RoadmapPlan[]
   feedback                   Feedback[]
+  enabledFeatures            CollegeFeature[]            @relation("FeatureEnabledBy")
+  authoredCollegeEvents      CollegeEvent[]              @relation("CollegeEventAuthor")
+  calendarFeedTokens         CalendarFeedToken[]
+  collegeCompanyNotes        CollegeCompanyNote[]        @relation("CompanyNoteAuthor")
+  createdPrepResources       PrepResource[]              @relation("PrepResourceAuthor")
+  createdInterviewQuestions  InterviewQuestion[]         @relation("InterviewQuestionAuthor")
+  notifications              Notification[]
+  notificationPreferences    NotificationPreference[]
+  emailOutbox                EmailOutbox[]
 
   @@index([collegeId])
   @@map("user_profiles")
@@ -383,6 +405,9 @@ model StudentProfile {
   studentSkills     StudentSkill[]
   driveApplications DriveApplication[]
   experiences       Experience[]
+  companyFollows            CompanyFollow[]
+  interviewQuestionProgress InterviewQuestionProgress[]
+  studentCompanyScores      StudentCompanyScore[]
 
   @@unique([collegeId, enrollmentNumber])
   @@unique([userId, collegeId])
@@ -498,6 +523,12 @@ model Company {
   drives        Drive[]
   experiences   Experience[]
   testTemplates TestTemplate[]
+  profile            CompanyProfile?
+  follows            CompanyFollow[]
+  collegeNotes       CollegeCompanyNote[]
+  prepResources      PrepResource[]
+  interviewQuestions InterviewQuestion[]
+  studentScores      StudentCompanyScore[]
 
   @@index([status])
   @@map("companies")
@@ -524,6 +555,7 @@ model Topic {
   subtopicRules         TestSectionRule[]     @relation("RuleSubtopic")
   studentStats          StudentTopicStat[]
   roadmapTasks          RoadmapTask[]
+  prepResources         PrepResource[]
 
   @@map("topics")
 }
@@ -583,6 +615,8 @@ model Drive {
   experiences    Experience[]
   consentRecords ConsentRecord[]
   roadmapTasks   RoadmapTask[]
+  driveEvents    DriveEvent[]
+  studentScores  StudentCompanyScore[]
 
   @@unique([id, collegeId])
   @@index([collegeId])
@@ -684,7 +718,8 @@ model DriveRound {
 
   drive   Drive             @relation(fields: [driveId, collegeId], references: [id, collegeId], onDelete: Cascade)
   college College           @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  topics  DriveRoundTopic[]
+  topics      DriveRoundTopic[]
+  driveEvents DriveEvent[]
 
   @@unique([driveId, sequence])
   @@unique([id, collegeId])
@@ -805,8 +840,9 @@ model Experience {
   company Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
   drive   Drive?             @relation(fields: [driveId, collegeId], references: [id, collegeId], onDelete: SetNull)
   author  StudentProfile     @relation(fields: [authorId, collegeId], references: [userId, collegeId], onDelete: Cascade)
-  rounds  ExperienceRound[]
-  reports ExperienceReport[]
+  rounds             ExperienceRound[]
+  reports            ExperienceReport[]
+  interviewQuestions InterviewQuestion[]
 
   @@unique([id, collegeId])
   @@index([collegeId])
@@ -1097,6 +1133,182 @@ enum RoadmapTaskStatus {
   SKIPPED
 
   @@map("roadmap_task_status_enum")
+}
+
+enum CollegeFeatureType {
+  COMPANY_PREP
+  COMPANY_MATCH
+  CALENDAR
+  EMAIL_NOTIFICATIONS
+  INTERVIEW_BANK
+
+  @@map("college_feature_type_enum")
+}
+
+enum DriveEventKind {
+  REGISTRATION_OPENS
+  REGISTRATION_DEADLINE
+  PRE_PLACEMENT_TALK
+  APTITUDE_TEST
+  CODING_TEST
+  GROUP_DISCUSSION
+  TECHNICAL_INTERVIEW
+  HR_INTERVIEW
+  RESULTS
+  DOCUMENT_DEADLINE
+  OTHER
+
+  @@map("drive_event_kind_enum")
+}
+
+enum EventMode {
+  ONLINE
+  OFFLINE
+
+  @@map("event_mode_enum")
+}
+
+enum EventAudience {
+  ALL_ELIGIBLE
+  REGISTERED
+  SHORTLISTED
+
+  @@map("event_audience_enum")
+}
+
+enum EventStatus {
+  SCHEDULED
+  RESCHEDULED
+  CANCELLED
+  DONE
+
+  @@map("event_status_enum")
+}
+
+enum CollegeEventAudience {
+  ALL
+  BY_BRANCH
+  BY_BATCH_YEAR
+
+  @@map("college_event_audience_enum")
+}
+
+enum PrepResourceType {
+  LINK
+  FILE
+  NOTE
+
+  @@map("prep_resource_type_enum")
+}
+
+enum PrepResourceStatus {
+  DRAFT
+  APPROVED
+  RETIRED
+
+  @@map("prep_resource_status_enum")
+}
+
+enum InterviewQuestionCategory {
+  HR
+  BEHAVIORAL
+  TECHNICAL
+  PROJECT
+  ROLE_SPECIFIC
+
+  @@map("interview_question_category_enum")
+}
+
+enum InterviewQuestionProgressStatus {
+  NOT_STARTED
+  PRACTICING
+  CONFIDENT
+
+  @@map("interview_question_progress_status_enum")
+}
+
+enum CompanyMatchConfidence {
+  HIGH
+  MEDIUM
+  LOW
+
+  @@map("company_match_confidence_enum")
+}
+
+enum CompanyPriorityTier {
+  PREPARE_NOW
+  PREPARE_NEXT
+  ON_RADAR
+  NOT_ELIGIBLE
+
+  @@map("company_priority_tier_enum")
+}
+
+enum NotificationCategory {
+  ACCOUNT_SECURITY
+  ACCOUNT_APPROVAL
+  DRIVE_PUBLISHED
+  REGISTRATION_DEADLINE
+  EVENT_REMINDER
+  APPLICATION_STATUS
+  TEST_SCHEDULED
+  TEST_REMINDER
+  NOTICE
+  EXPERIENCE_REVIEW
+  PREP_NUDGE
+  WEEKLY_DIGEST
+
+  @@map("notification_category_enum")
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+
+  @@map("notification_channel_enum")
+}
+
+enum EmailOutboxStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+  SUPPRESSED
+  SKIPPED
+  BOUNCED
+  COMPLAINED
+
+  @@map("email_outbox_status_enum")
+}
+
+enum CompanySizeBand {
+  STARTUP
+  MID_SIZE
+  ENTERPRISE
+  LARGE_ENTERPRISE
+
+  @@map("company_size_band_enum")
+}
+
+enum RoleFamily {
+  SOFTWARE_DEV
+  DATA_ANALYTICS
+  QA_TESTING
+  SUPPORT_OPERATIONS
+  CORE_ENGINEERING
+  CONSULTING_BUSINESS
+  OTHER
+
+  @@map("role_family_enum")
+}
+
+enum EmailSuppressionReason {
+  BOUNCE
+  COMPLAINT
+  MANUAL
+  UNSUBSCRIBE_ALL
+
+  @@map("email_suppression_reason_enum")
 }
 
 model QuestionGroup {
@@ -1534,5 +1746,374 @@ model Feedback {
 
   @@index([userId])
   @@map("feedback")
+}
+
+model CollegeFeature {
+  id        String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  collegeId String             @map("college_id") @db.Uuid
+  feature   CollegeFeatureType
+  isEnabled Boolean            @default(false) @map("is_enabled")
+  enabledAt DateTime?          @map("enabled_at") @db.Timestamptz(6)
+  enabledBy String?            @map("enabled_by") @db.Uuid
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  college College      @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  enabler UserProfile? @relation("FeatureEnabledBy", fields: [enabledBy], references: [id], onDelete: SetNull)
+
+  @@unique([collegeId, feature])
+  @@map("college_features")
+}
+
+model DriveEvent {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  driveId        String         @map("drive_id") @db.Uuid
+  collegeId      String         @map("college_id") @db.Uuid
+  roundId        String?        @map("round_id") @db.Uuid
+  kind           DriveEventKind
+  title          String         @db.VarChar(255)
+  description    String?        @db.Text
+  startsAt       DateTime       @map("starts_at") @db.Timestamptz(6)
+  endsAt         DateTime       @map("ends_at") @db.Timestamptz(6)
+  mode           EventMode      @default(OFFLINE)
+  location       String?        @db.VarChar(255)
+  meetingUrl     String?        @map("meeting_url") @db.VarChar(500)
+  audience       EventAudience  @default(ALL_ELIGIBLE)
+  status         EventStatus    @default(SCHEDULED)
+  notifyOnCreate Boolean        @default(true) @map("notify_on_create")
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  drive   Drive       @relation(fields: [driveId, collegeId], references: [id, collegeId], onDelete: Cascade)
+  college College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  round   DriveRound? @relation(fields: [roundId], references: [id], onDelete: SetNull)
+
+  @@unique([id, collegeId])
+  @@index([driveId])
+  @@index([collegeId])
+  @@index([startsAt])
+  @@map("drive_events")
+}
+
+model CollegeEvent {
+  id               String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  collegeId        String               @map("college_id") @db.Uuid
+  title            String               @db.VarChar(255)
+  description      String?              @db.Text
+  startsAt         DateTime             @map("starts_at") @db.Timestamptz(6)
+  endsAt           DateTime             @map("ends_at") @db.Timestamptz(6)
+  mode             EventMode            @default(OFFLINE)
+  location         String?              @db.VarChar(255)
+  meetingUrl       String?              @map("meeting_url") @db.VarChar(500)
+  audience         CollegeEventAudience @default(ALL)
+  targetBranchIds  String[]             @default([]) @map("target_branch_ids") @db.Uuid
+  targetBatchYears Int[]                @default([]) @map("target_batch_years")
+  status           EventStatus          @default(SCHEDULED)
+  createdBy        String?              @map("created_by") @db.Uuid
+  createdAt        DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  college College      @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  author  UserProfile? @relation("CollegeEventAuthor", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@index([startsAt])
+  @@map("college_events")
+}
+
+model CalendarFeedToken {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  collegeId      String    @map("college_id") @db.Uuid
+  tokenHash      String    @unique @map("token_hash") @db.VarChar(64)
+  isActive       Boolean   @default(true) @map("is_active")
+  lastAccessedAt DateTime? @map("last_accessed_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user    UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, collegeId])
+  @@index([tokenHash])
+  @@map("calendar_feed_tokens")
+}
+
+model CompanyFollow {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  collegeId String   @map("college_id") @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  student StudentProfile @relation(fields: [studentId, collegeId], references: [userId, collegeId], onDelete: Cascade)
+  college College        @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  company Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, companyId])
+  @@index([studentId])
+  @@index([collegeId])
+  @@index([companyId])
+  @@map("company_follows")
+}
+
+model CollegeCompanyNote {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  collegeId String   @map("college_id") @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  note      String   @db.Text
+  updatedBy String?  @map("updated_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  college College      @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  company Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  author  UserProfile? @relation("CompanyNoteAuthor", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@unique([collegeId, companyId])
+  @@index([collegeId])
+  @@index([companyId])
+  @@map("college_company_notes")
+}
+
+model PrepResource {
+  id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scope       ContentScope       @default(COLLEGE)
+  collegeId   String?            @map("college_id") @db.Uuid
+  companyId   String?            @map("company_id") @db.Uuid
+  topicId     String?            @map("topic_id") @db.Uuid
+  title       String             @db.VarChar(255)
+  description String?            @db.Text
+  type        PrepResourceType   @default(LINK)
+  url         String?            @db.VarChar(1000)
+  storagePath String?            @map("storage_path") @db.VarChar(500)
+  content     String?            @db.Text
+  status      PrepResourceStatus @default(DRAFT)
+  createdBy   String?            @map("created_by") @db.Uuid
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  college College?     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  company Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  topic   Topic?       @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  author  UserProfile? @relation("PrepResourceAuthor", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@index([companyId])
+  @@index([topicId])
+  @@index([status])
+  @@map("prep_resources")
+}
+
+model InterviewQuestion {
+  id                 String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scope              ContentScope              @default(COLLEGE)
+  collegeId          String?                   @map("college_id") @db.Uuid
+  companyId          String?                   @map("company_id") @db.Uuid
+  roleFamily         RoleFamily?               @default(SOFTWARE_DEV) @map("role_family")
+  category           InterviewQuestionCategory @default(TECHNICAL)
+  question           String                    @db.Text
+  answerGuide        String?                   @map("answer_guide") @db.Text
+  difficulty         Int                       @default(3)
+  tags               String[]                  @default([])
+  status             QuestionStatus            @default(DRAFT)
+  source             QuestionSource            @default(AUTHORED)
+  sourceExperienceId String?                   @map("source_experience_id") @db.Uuid
+  createdBy          String?                   @map("created_by") @db.Uuid
+  createdAt          DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  college          College?                    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  company          Company?                    @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  sourceExperience Experience?                 @relation(fields: [sourceExperienceId], references: [id], onDelete: SetNull)
+  author           UserProfile?                @relation("InterviewQuestionAuthor", fields: [createdBy], references: [id], onDelete: SetNull)
+  progressList     InterviewQuestionProgress[]
+
+  @@unique([id, collegeId])
+  @@index([collegeId])
+  @@index([companyId])
+  @@index([roleFamily])
+  @@index([category])
+  @@index([status])
+  @@map("interview_questions")
+}
+
+model InterviewQuestionProgress {
+  id              String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId       String                          @map("student_id") @db.Uuid
+  collegeId       String                          @map("college_id") @db.Uuid
+  questionId      String                          @map("question_id") @db.Uuid
+  status          InterviewQuestionProgressStatus @default(NOT_STARTED)
+  studentNotes    String?                         @map("student_notes") @db.Text
+  lastPracticedAt DateTime?                       @map("last_practiced_at") @db.Timestamptz(6)
+  createdAt       DateTime                        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime                        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  student  StudentProfile    @relation(fields: [studentId, collegeId], references: [userId, collegeId], onDelete: Cascade)
+  college  College           @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  question InterviewQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, questionId])
+  @@index([studentId])
+  @@index([collegeId])
+  @@index([questionId])
+  @@map("interview_question_progress")
+}
+
+model StudentCompanyScore {
+  id                 String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId          String                 @map("student_id") @db.Uuid
+  collegeId          String                 @map("college_id") @db.Uuid
+  companyId          String                 @map("company_id") @db.Uuid
+  driveId            String?                @map("drive_id") @db.Uuid
+  formulaVersion     String                 @default("1.0.0") @map("formula_version") @db.VarChar(20)
+  matchScore         Float?                 @map("match_score")
+  matchConfidence    CompanyMatchConfidence @default(LOW) @map("match_confidence")
+  matchComponents    Json                   @default("{}") @map("match_components") @db.JsonB
+  priorityTier       CompanyPriorityTier    @default(ON_RADAR) @map("priority_tier")
+  priorityScore      Float                  @default(0) @map("priority_score")
+  priorityComponents Json                   @default("{}") @map("priority_components") @db.JsonB
+  computedAt         DateTime               @default(now()) @map("computed_at") @db.Timestamptz(6)
+
+  student StudentProfile @relation(fields: [studentId, collegeId], references: [userId, collegeId], onDelete: Cascade)
+  college College        @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  company Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  drive   Drive?         @relation(fields: [driveId], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, companyId])
+  @@index([studentId])
+  @@index([collegeId])
+  @@index([companyId])
+  @@index([priorityTier])
+  @@map("student_company_scores")
+}
+
+model Notification {
+  id        String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String               @map("user_id") @db.Uuid
+  collegeId String?              @map("college_id") @db.Uuid
+  category  NotificationCategory
+  channel   NotificationChannel  @default(IN_APP)
+  title     String               @db.VarChar(255)
+  body      String               @db.Text
+  linkUrl   String?              @map("link_url") @db.VarChar(500)
+  readAt    DateTime?            @map("read_at") @db.Timestamptz(6)
+  dedupeKey String?              @map("dedupe_key") @db.VarChar(255)
+  metadata  Json                 @default("{}") @db.JsonB
+  createdAt DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user    UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college College?    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+  @@index([collegeId])
+  @@index([dedupeKey])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String               @map("user_id") @db.Uuid
+  collegeId    String?              @map("college_id") @db.Uuid
+  category     NotificationCategory
+  inAppEnabled Boolean              @default(true) @map("in_app_enabled")
+  emailEnabled Boolean              @default(true) @map("email_enabled")
+  createdAt    DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user    UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college College?    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category])
+  @@index([userId])
+  @@map("notification_preferences")
+}
+
+model EmailOutbox {
+  id                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String?              @map("user_id") @db.Uuid
+  collegeId         String?              @map("college_id") @db.Uuid
+  recipientEmail    String               @map("recipient_email") @db.VarChar(255)
+  recipientName     String?              @map("recipient_name") @db.VarChar(255)
+  category          NotificationCategory
+  subject           String               @db.VarChar(255)
+  bodyHtml          String               @map("body_html") @db.Text
+  bodyText          String               @map("body_text") @db.Text
+  status            EmailOutboxStatus    @default(PENDING)
+  attempts          Int                  @default(0)
+  maxAttempts       Int                  @default(3) @map("max_attempts")
+  lastAttemptAt     DateTime?            @map("last_attempt_at") @db.Timestamptz(6)
+  nextAttemptAt     DateTime?            @map("next_attempt_at") @db.Timestamptz(6)
+  providerMessageId String?              @map("provider_message_id") @db.VarChar(255)
+  lastError         String?              @map("last_error") @db.Text
+  dedupeKey         String?              @map("dedupe_key") @db.VarChar(255)
+  metadata          Json                 @default("{}") @db.JsonB
+  sentAt            DateTime?            @map("sent_at") @db.Timestamptz(6)
+  createdAt         DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user    UserProfile? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  college College?     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([userId])
+  @@index([collegeId])
+  @@index([dedupeKey])
+  @@map("email_outbox")
+}
+
+model CompanyProfile {
+  id                      String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId               String          @unique @map("company_id") @db.Uuid
+  sizeBand                CompanySizeBand @default(MID_SIZE) @map("size_band")
+  primaryRoleFamily       RoleFamily      @default(SOFTWARE_DEV) @map("primary_role_family")
+  overview                String?         @db.Text
+  websiteUrl              String?         @map("website_url") @db.VarChar(500)
+  logoUrl                 String?         @map("logo_url") @db.VarChar(500)
+  hqCity                  String?         @map("hq_city") @db.VarChar(100)
+  hqCountry               String?         @default("India") @map("hq_country") @db.VarChar(100)
+  glassdoorRating         Float?          @map("glassdoor_rating")
+  techStack               String[]        @default([]) @map("tech_stack")
+  selectionProcessSummary String?         @map("selection_process_summary") @db.Text
+  typicalRoundsCount      Int?            @default(3) @map("typical_rounds_count")
+  ctcBreakupNote          String?         @map("ctc_breakup_note") @db.Text
+  createdAt               DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([sizeBand])
+  @@index([primaryRoleFamily])
+  @@map("company_profiles")
+}
+
+model EmailSuppression {
+  id        String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email     String                 @db.VarChar(255)
+  reason    EmailSuppressionReason
+  details   String?                @db.Text
+  createdAt DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([email, reason])
+  @@index([email])
+  @@map("email_suppressions")
+}
+
+model WebhookEvent {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider    String    @db.VarChar(50)
+  eventId     String    @map("event_id") @db.VarChar(255)
+  eventType   String    @map("event_type") @db.VarChar(100)
+  payload     Json      @db.JsonB
+  processed   Boolean   @default(false)
+  processedAt DateTime? @map("processed_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([provider, eventId])
+  @@index([processed])
+  @@map("webhook_events")
 }
 

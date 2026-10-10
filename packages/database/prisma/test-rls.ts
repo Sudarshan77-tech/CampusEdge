@@ -613,6 +613,140 @@ async function testRls() {
     process.exit(1);
   }
 
+  // -------------------------------------------------------------
+  // Test 12: DB Trigger: company_follows Max 15 Follows Enforcement
+  // -------------------------------------------------------------
+  totalTests++;
+  console.info('\n[Test 12] Testing company_follows max 15 trigger...');
+  let maxFollowsBlocked = false;
+  try {
+    await prisma.$transaction(
+      async (tx) => {
+        const timestamp = Date.now();
+        const companyData = Array.from({ length: 16 }).map((_, i) => ({
+          name: `Follow Test Corp ${i}_${timestamp}`,
+          normalizedName: `follow test corp ${i}_${timestamp}`,
+          slug: `follow-test-corp-${i}-${timestamp}`,
+          status: 'VERIFIED' as const,
+        }));
+        await tx.company.createMany({ data: companyData });
+        const createdCompanies = await tx.company.findMany({
+          where: { slug: { contains: `${timestamp}` } },
+          take: 16,
+        });
+
+        // Insert first 15 follows
+        for (let i = 0; i < 15; i++) {
+          await tx.companyFollow.create({
+            data: {
+              studentId: studentProfile.id,
+              collegeId: DEMO_COLLEGE_ID,
+              companyId: createdCompanies[i].id,
+            },
+          });
+        }
+
+        // 16th follow must fail
+        await tx.companyFollow.create({
+          data: {
+            studentId: studentProfile.id,
+            collegeId: DEMO_COLLEGE_ID,
+            companyId: createdCompanies[15].id,
+          },
+        });
+
+        throw new Error('ROLLBACK_INTENTIONAL');
+      },
+      { timeout: 30000, maxWait: 10000 },
+    );
+  } catch (err: unknown) {
+    const msg = String(err);
+    if (msg.includes('cannot follow more than 15 companies')) {
+      maxFollowsBlocked = true;
+    } else {
+      console.warn('Caught other error in Test 12:', msg);
+    }
+  }
+
+  if (maxFollowsBlocked) {
+    console.info('  ✓ PASS: Database trigger prevented following more than 15 companies.');
+    passedTests++;
+  } else {
+    console.error('  ✗ FAIL: Database trigger allowed following more than 15 companies!');
+    process.exit(1);
+  }
+
+  // -------------------------------------------------------------
+  // Test 13: CHECK Constraint: drive_events ends_at >= starts_at
+  // -------------------------------------------------------------
+  totalTests++;
+  console.info('\n[Test 13] Testing drive_events ends_at >= starts_at CHECK constraint...');
+  let eventDatesCheckFired = false;
+  try {
+    await prisma.$transaction(async (tx) => {
+      const company = await tx.company.create({
+        data: {
+          name: 'Event Check Corp ' + Date.now(),
+          normalizedName: 'event check corp ' + Date.now(),
+          slug: 'event-check-corp-' + Date.now(),
+          status: 'VERIFIED',
+        },
+      });
+
+      const season = await tx.placementSeason.create({
+        data: {
+          collegeId: DEMO_COLLEGE_ID,
+          label: '2026-27-EVT',
+          batchYear: 2027,
+          startDate: new Date('2026-07-01'),
+          endDate: new Date('2027-06-30'),
+        },
+      });
+
+      const drive = await tx.drive.create({
+        data: {
+          collegeId: DEMO_COLLEGE_ID,
+          companyId: company.id,
+          seasonId: season.id,
+          title: 'Event Check Test Drive',
+        },
+      });
+
+      // Insert invalid event where ends_at < starts_at
+      await tx.$executeRawUnsafe(`
+        INSERT INTO public.drive_events (
+          id, drive_id, college_id, kind, title, starts_at, ends_at, mode, audience, status
+        ) VALUES (
+          gen_random_uuid(),
+          '${drive.id}'::uuid,
+          '${DEMO_COLLEGE_ID}'::uuid,
+          'APTITUDE_TEST',
+          'Invalid Dates Test',
+          '2026-10-15 14:00:00+00'::timestamptz,
+          '2026-10-15 12:00:00+00'::timestamptz,
+          'OFFLINE',
+          'ALL_ELIGIBLE',
+          'SCHEDULED'
+        );
+      `);
+
+      throw new Error('ROLLBACK_INTENTIONAL');
+    });
+  } catch (err: unknown) {
+    const msg = String(err);
+    if (msg.includes('drive_events_ends_at_check') || msg.includes('check constraint')) {
+      eventDatesCheckFired = true;
+    }
+  }
+
+  if (eventDatesCheckFired) {
+    console.info('  ✓ PASS: Database CHECK constraint enforced drive_events ends_at >= starts_at.');
+    passedTests++;
+  } else {
+    console.error('  ✗ FAIL: Database allowed drive_events with ends_at < starts_at!');
+    process.exit(1);
+  }
+
   console.info(
     `\n=== All ${passedTests}/${totalTests} RLS & Security Tests PASSED Successfully ===`,
   );
