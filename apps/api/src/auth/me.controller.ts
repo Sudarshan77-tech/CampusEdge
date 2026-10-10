@@ -17,7 +17,7 @@ import { PrismaService } from '../prisma.service';
 export class MeController {
   constructor(private readonly prisma: PrismaService) {}
 
-  @Get(['me', 'auth/me'])
+  @Get('me')
   @ApiOperation({
     summary: 'Get current authenticated user identity, tenant context, and onboarding status',
   })
