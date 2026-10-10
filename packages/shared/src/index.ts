@@ -282,3 +282,16 @@ export * from './mastery-engine';
 export * from './readiness-engine';
 export * from './roadmap-engine';
 export * from './phase3-dtos';
+
+// =============================================================================
+// Phase 4 Exports
+// =============================================================================
+
+export * from './phase4-enums';
+export * from './company-scoring-config';
+export * from './company-match-engine';
+export * from './company-priority-engine';
+export * from './company-preparation-engine';
+export * from './calendar-engine';
+export * from './notification-config';
+export * from './phase4-dtos';
