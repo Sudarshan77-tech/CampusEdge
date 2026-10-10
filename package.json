@@ -27,6 +27,7 @@
     "content:seed:dev": "pnpm --filter @campusedge/database content:seed:dev",
     "storage:setup": "pnpm --filter @campusedge/database storage:setup",
     "perf:attempts": "pnpm --filter @campusedge/database perf:attempts",
+    "smoke-test": "pnpm --filter @campusedge/database exec tsx ../../scripts/production-smoke-test.ts",
     "admin:create-super-admin": "pnpm --filter @campusedge/api admin:create-super-admin",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
