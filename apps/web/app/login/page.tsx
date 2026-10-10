@@ -42,7 +42,9 @@ function LoginForm() {
 
   const handleRedirect = async () => {
     try {
-      const profile = await api.get<UserProfile>('/auth/me');
+      const res = await api.get<{ data?: UserProfile } & UserProfile>('/auth/me');
+      const profile: UserProfile = res.data && res.data.role ? res.data : res;
+
       if (redirectTo) {
         router.push(redirectTo);
         return;

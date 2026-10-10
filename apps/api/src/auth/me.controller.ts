@@ -12,7 +12,7 @@ import { PrismaService } from '../prisma.service';
 
 @ApiTags('Auth')
 @ApiBearerAuth()
-@Controller('me')
+@Controller(['me', 'auth/me'])
 @UseGuards(JwtAuthGuard)
 export class MeController {
   constructor(private readonly prisma: PrismaService) {}
@@ -95,21 +95,24 @@ export class MeController {
       }
     }
 
+    const profileData = {
+      id: profile.id,
+      email: profile.email,
+      fullName: profile.fullName,
+      role: profile.role,
+      status: profile.status,
+      collegeId: profile.collegeId,
+      college: profile.college,
+      consents: profile.consents,
+      studentProfile: profile.studentProfile,
+      onboardingStep,
+      profileCompletion,
+    };
+
     return {
       success: true,
-      data: {
-        id: profile.id,
-        email: profile.email,
-        fullName: profile.fullName,
-        role: profile.role,
-        status: profile.status,
-        collegeId: profile.collegeId,
-        college: profile.college,
-        consents: profile.consents,
-        studentProfile: profile.studentProfile,
-        onboardingStep,
-        profileCompletion,
-      },
+      data: profileData,
+      ...profileData,
     };
   }
 }

@@ -17,15 +17,20 @@ export async function GET(request: Request) {
 
       // Query /auth/me from NestJS backend to determine destination
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-        const res = await fetch(`${apiUrl}/auth/me`, {
+        const rawApiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(
+          /\/+$/,
+          '',
+        );
+        const apiUrl = rawApiUrl.endsWith('/api/v1') ? rawApiUrl : `${rawApiUrl}/api/v1`;
+        const res = await fetch(`${apiUrl}/me`, {
           headers: {
             Authorization: `Bearer ${authData.session.access_token}`,
           },
         });
 
         if (res.ok) {
-          const profile = await res.json();
+          const resJson = await res.json();
+          const profile = resJson.data || resJson;
           if (profile.role === 'SUPER_ADMIN') {
             return NextResponse.redirect(`${origin}/admin/colleges`);
           }

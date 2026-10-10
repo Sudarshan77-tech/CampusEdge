@@ -17,11 +17,33 @@ async function bootstrap() {
   const webOrigin = configService.get<string>('WEB_ORIGIN', 'http://localhost:3000');
 
   // Security Headers
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
 
-  // CORS limited to web origin
+  // CORS allowing development ports and configured web origin
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+    webOrigin,
+  ].filter(Boolean) as string[];
+
   app.enableCors({
-    origin: webOrigin,
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      // Allow requests with no origin (mobile apps, server-to-server, curl) or allowlisted origins
+      if (!origin || allowedOrigins.includes(origin) || nodeEnv !== 'production') {
+        callback(null, true);
+      } else {
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id', 'x-college-id'],
@@ -59,8 +81,10 @@ async function bootstrap() {
     }),
   );
 
-  // Global API Prefix
-  app.setGlobalPrefix('api/v1');
+  // Global API Prefix (excluding health routes so both /health and /api/v1/health work directly)
+  app.setGlobalPrefix('api/v1', {
+    exclude: ['health', 'api/v1/health'],
+  });
 
   // Swagger Documentation (disabled in production)
   if (nodeEnv !== 'production') {

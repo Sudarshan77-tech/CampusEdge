@@ -128,9 +128,12 @@ export default function HistoricalImportPage() {
   };
 
   const handleDownloadErrors = async () => {
-    if (!jobId) return;
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-    window.open(`${API_BASE}/imports/${jobId}/errors.csv`, '_blank');
+    const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(
+      /\/+$/,
+      '',
+    );
+    const baseUrl = API_BASE.endsWith('/api/v1') ? API_BASE : `${API_BASE}/api/v1`;
+    window.open(`${baseUrl}/imports/${jobId}/errors.csv`, '_blank');
   };
 
   return (

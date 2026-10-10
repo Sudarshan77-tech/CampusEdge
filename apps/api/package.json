@@ -9,7 +9,7 @@
     "start:prod": "node dist/main.js",
     "lint": "eslint \"src/**/*.ts\" && prettier --check \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
-    "test": "jest --passWithNoTests",
+    "test": "jest --passWithNoTests --runInBand",
     "admin:create-super-admin": "tsx scripts/create-super-admin.ts"
   },
   "dependencies": {
