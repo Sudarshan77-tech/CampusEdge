@@ -35,7 +35,7 @@ export default function PlacementCellDashboardPage() {
       try {
         setLoading(true);
         const [me, colData, statsData] = await Promise.all([
-          api.get<{ email: string; fullName?: string }>('/auth/me'),
+          api.get<{ email: string; fullName?: string }>('/me'),
           api.get<CollegeInfo>('/colleges/my-college'),
           api.get<CollegeStats>('/colleges/my-college/stats'),
         ]);

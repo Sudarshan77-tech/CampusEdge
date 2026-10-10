@@ -79,7 +79,7 @@ export default function StudentOnboardingPage() {
           collegeId?: string | null;
           onboardingStep?: number;
           college?: CollegeOption | null;
-        }>('/auth/me');
+        }>('/me');
 
         if (me.college) {
           setSelectedCollege(me.college);

@@ -12,7 +12,7 @@ import { PrismaService } from '../prisma.service';
 
 @ApiTags('Auth')
 @ApiBearerAuth()
-@Controller(['me', 'auth/me'])
+@Controller('me')
 @UseGuards(JwtAuthGuard)
 export class MeController {
   constructor(private readonly prisma: PrismaService) {}

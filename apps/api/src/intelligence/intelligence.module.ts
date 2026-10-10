@@ -1,11 +1,10 @@
 import { Module } from '@nestjs/common';
 import { IntelligenceService } from './intelligence.service';
 import { IntelligenceController } from './intelligence.controller';
-import { PrismaService } from '../prisma.service';
 
 @Module({
   controllers: [IntelligenceController],
-  providers: [IntelligenceService, PrismaService],
+  providers: [IntelligenceService],
   exports: [IntelligenceService],
 })
 export class IntelligenceModule {}

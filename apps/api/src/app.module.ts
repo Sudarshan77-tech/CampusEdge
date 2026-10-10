@@ -19,7 +19,7 @@ import { NoticesModule } from './notices/notices.module';
 import { ExperiencesModule } from './experiences/experiences.module';
 import { IntelligenceModule } from './intelligence/intelligence.module';
 import { ImportsModule } from './imports/imports.module';
-import { PrismaService } from './prisma.service';
+import { PrismaModule } from './prisma/prisma.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 @Module({
@@ -35,6 +35,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
         limit: 100,
       },
     ]),
+    PrismaModule,
     HealthModule,
     AuditModule,
     AuthModule,
@@ -53,7 +54,6 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     ImportsModule,
   ],
   providers: [
-    PrismaService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

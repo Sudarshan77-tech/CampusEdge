@@ -81,10 +81,11 @@ async function bootstrap() {
     }),
   );
 
-  // Global API Prefix (excluding health routes so both /health and /api/v1/health work directly)
-  app.setGlobalPrefix('api/v1', {
-    exclude: ['health', 'api/v1/health'],
-  });
+  // Global API Prefix
+  app.setGlobalPrefix('api/v1');
+
+  // Enable NestJS shutdown hooks for graceful termination
+  app.enableShutdownHooks();
 
   // Swagger Documentation (disabled in production)
   if (nodeEnv !== 'production') {
