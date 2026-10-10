@@ -107,12 +107,21 @@
 
 ## Production Checklist
 
+### Blocking Pre-Launch Gates
+
+- [ ] Human review of all seeded questions (Head of Curriculum sign-off)
+- [ ] Legal review of all draft policies (External Counsel / DPO approval)
+- [ ] Pilot college sign-off (Institutional SLA & TPO agreement)
+- [ ] SMTP verified (Transactional email provider SPF/DKIM configured)
+- [ ] Backups verified (PostgreSQL PITR restoration drill verified)
+
+### Operational Infrastructure
+
 - [ ] Automated database backups with Point-in-Time Recovery (PITR)
 - [ ] Sentry error monitoring integration (web and api)
 - [ ] Uptime monitoring and synthetic heartbeat alerts
 - [ ] Staging environment matching production architecture
 - [ ] API rate limiting verified under load
-- [ ] Transactional email provider verified (Resend / AWS SES)
 - [ ] Terms of Service, Privacy Policy, and DPDP Consent agreements in place
 
 ---
