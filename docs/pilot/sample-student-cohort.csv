@@ -1,0 +1,9 @@
+full_name,email,branch_code,batch_year,cgpa,active_backlogs,enrollment_number,degree
+Aarav Sharma,aarav.sharma@apex.edu,CSE,2026,8.75,0,APEX2022CSE001,BTECH
+Diya Patel,diya.patel@apex.edu,CSE,2026,9.12,0,APEX2022CSE002,BTECH
+Rohan Verma,rohan.verma@apex.edu,ECE,2026,7.85,0,APEX2022ECE001,BTECH
+Ananya Iyer,ananya.iyer@apex.edu,CSE,2026,8.40,0,APEX2022CSE003,BTECH
+Vikram Singh,vikram.singh@apex.edu,MECH,2026,7.20,1,APEX2022ME001,BTECH
+Sneha Kulkarni,sneha.kulkarni@apex.edu,CSE,2026,8.95,0,APEX2022CSE004,BTECH
+Aditya Nair,aditya.nair@apex.edu,ECE,2026,7.60,0,APEX2022ECE002,BTECH
+Pooja Reddy,pooja.reddy@apex.edu,CSE,2026,8.10,0,APEX2022CSE005,BTECH
