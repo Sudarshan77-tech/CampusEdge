@@ -12,6 +12,11 @@ export const envSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_MODEL: z.string().optional(),
   REDIS_URL: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_WEBHOOK_SECRET: z.string().optional(),
+  INTERNAL_JOB_SECRET: z.string().default('local-dev-internal-secret'),
+  UNSUBSCRIBE_SIGNING_SECRET: z.string().default('local-dev-unsub-secret'),
+  EMAIL_FROM: z.string().default('notifications@campusedge.io'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

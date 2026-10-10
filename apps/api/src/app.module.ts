@@ -25,6 +25,7 @@ import { AttemptsModule } from './attempts/attempts.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { DiagnosticsModule } from './diagnostics/diagnostics.module';
 import { CockpitsModule } from './cockpits/cockpits.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
@@ -64,6 +65,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     AnalyticsModule,
     DiagnosticsModule,
     CockpitsModule,
+    NotificationsModule,
   ],
   providers: [
     {
