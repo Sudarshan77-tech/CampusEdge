@@ -15,7 +15,7 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}${next}`);
       }
 
-      // Query /auth/me from NestJS backend to determine destination
+      // Query /me from NestJS backend to determine destination
       try {
         const rawApiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(
           /\/+$/,

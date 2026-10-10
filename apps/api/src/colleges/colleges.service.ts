@@ -48,6 +48,11 @@ export class CollegesService {
         slug: true,
         city: true,
         state: true,
+        branches: {
+          where: { isActive: true },
+          select: { id: true, code: true, name: true },
+          orderBy: { code: 'asc' },
+        },
       },
     });
   }
